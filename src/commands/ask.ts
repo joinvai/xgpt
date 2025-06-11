@@ -1,7 +1,7 @@
 import OpenAI from "openai";
-import { readFile } from "fs/promises";
 import "dotenv/config";
 import type { TweetWithEmbedding, QueryOptions, CommandResult } from "../types/common.js";
+import { embeddingQueries } from "../database/queries.js";
 
 function cosine(a: number[], b: number[]): number {
   let dot = 0;
@@ -39,26 +39,36 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
       };
     }
 
-    // Read embeddings from file
-    console.log(`📖 Loading embeddings from ${vectorFile}...`);
+    // Read embeddings from database
+    console.log(`📖 Loading embeddings from database...`);
     let embeddings: TweetWithEmbedding[];
 
     try {
-      const fileContent = await readFile(vectorFile, "utf8");
-      embeddings = JSON.parse(fileContent);
+      const dbEmbeddings = await embeddingQueries.getEmbeddingsForSearch();
+
+      if (dbEmbeddings.length === 0) {
+        return {
+          success: false,
+          message: "No embeddings found in database",
+          error: "Please generate embeddings first using: xgpt embed"
+        };
+      }
+
+      // Convert database embeddings to TweetWithEmbedding format
+      embeddings = dbEmbeddings.map(dbEmbed => ({
+        id: dbEmbed.tweetId,
+        text: dbEmbed.tweetText,
+        user: dbEmbed.tweetUsername,
+        created_at: dbEmbed.tweetCreatedAt?.toISOString(),
+        metadata: dbEmbed.tweetMetadata ? JSON.parse(dbEmbed.tweetMetadata as string) : undefined,
+        vec: JSON.parse(dbEmbed.vector as string)
+      }));
+
     } catch (error) {
       return {
         success: false,
-        message: `Failed to read ${vectorFile}`,
-        error: `Please run 'xgpt embed' first to generate embeddings. ${error instanceof Error ? error.message : ''}`
-      };
-    }
-
-    if (!Array.isArray(embeddings) || embeddings.length === 0) {
-      return {
-        success: false,
-        message: "No embeddings found",
-        error: `${vectorFile} is empty or contains invalid data`
+        message: "Failed to read embeddings from database",
+        error: error instanceof Error ? error.message : "Database query failed"
       };
     }
 
