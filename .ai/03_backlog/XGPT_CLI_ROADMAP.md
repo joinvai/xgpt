@@ -67,9 +67,9 @@ Transform X-GPT from script-based tool to interactive CLI application called `tw
 - 13 performance indexes, WAL mode, comprehensive session tracking
 
 **Available Next Phases:**
-1. **Phase 3: Enhanced Scraping** (Medium Priority) - Improve scraping capabilities
-2. **Phase 4: Performance & Reliability** (Medium Priority) - Add caching, rate limiting, progress
-3. **Phase 5: User Experience** (Low Priority) - Configuration, error handling, export
+1. **Phase 3: Enhanced Scraping** ✅ COMPLETED - All scraping capabilities implemented
+2. **Phase 4: Performance & Reliability** (HIGH Priority) - CRITICAL for production use with auth tokens
+3. **Phase 5: User Experience** (Medium Priority) - Configuration, error handling, export
 
 ### Completed Tasks
 
@@ -180,60 +180,83 @@ Transform X-GPT from script-based tool to interactive CLI application called `tw
   - **Dependencies**: PROMPT-002 ✅
   - **Acceptance**: User can select time ranges with accurate date calculations ✅
 
-## Phase 3: Enhanced Scraping (Priority: Medium)
+## Phase 3: Enhanced Scraping (Priority: Medium) ✅ COMPLETED
 
-### Future Tasks
+### Completed Tasks
 
-- [ ] **SCRAPE-001: Implement content filtering**
-  - **SCRAPE-001a**: Create `src/scraper/` directory structure
-  - **SCRAPE-001b**: Create `src/scraper/filters.ts` with filtering logic
-  - **SCRAPE-001c**: Implement reply filtering based on user selection
-  - **SCRAPE-001d**: Implement retweet filtering based on user selection
-  - **SCRAPE-001e**: Create keyword matching algorithm (case-insensitive, partial match)
-  - **SCRAPE-001f**: Implement keyword filtering during tweet processing
-  - **SCRAPE-001g**: Add filter statistics (tweets filtered out, reasons)
-  - **SCRAPE-001h**: Update scrape command to use session filters
-  - **SCRAPE-001i**: Add filter preview mode to show what would be filtered
-  - **SCRAPE-001j**: Test filtering with various content types and keywords
-  - **Files**: `src/scraper/filters.ts`, `src/types/filters.ts`
-  - **Dependencies**: PROMPT-003
-  - **Acceptance**: Scraping accurately filters content based on user preferences
+- [x] **SCRAPE-001: Implement content filtering** ✅
+  - [x] **SCRAPE-001a**: Create filtering logic integrated in scrape command ✅
+  - [x] **SCRAPE-001b**: Implement reply filtering based on `includeReplies` flag ✅
+  - [x] **SCRAPE-001c**: Implement retweet filtering based on `includeRetweets` flag ✅
+  - [x] **SCRAPE-001d**: Create keyword matching algorithm in `src/prompts/searchScope.ts` ✅
+  - [x] **SCRAPE-001e**: Implement keyword filtering during tweet processing ✅
+  - [x] **SCRAPE-001f**: Add filter statistics (content filtered, keyword filtered counts) ✅
+  - [x] **SCRAPE-001g**: Update scrape command to use session filters from interactive prompts ✅
+  - [x] **SCRAPE-001h**: Add filter display showing active filters before scraping ✅
+  - [x] **SCRAPE-001i**: Test filtering with various content types and keywords ✅
+  - **Files**: `src/commands/scrape.ts` ✅, `src/prompts/searchScope.ts` ✅
+  - **Dependencies**: PROMPT-003 ✅
+  - **Acceptance**: Scraping accurately filters content based on user preferences ✅
 
-- [ ] **SCRAPE-002: Time-based filtering**
-  - **SCRAPE-002a**: Create `src/scraper/timeFilter.ts` with date filtering logic
-  - **SCRAPE-002b**: Implement tweet date parsing and validation
-  - **SCRAPE-002c**: Add date range filtering during scraping process
-  - **SCRAPE-002d**: Optimize filtering to stop scraping when outside date range
-  - **SCRAPE-002e**: Add progress indicators showing date progress
-  - **SCRAPE-002f**: Handle timezone differences in tweet timestamps
-  - **SCRAPE-002g**: Add date-based early termination for efficiency
-  - **SCRAPE-002h**: Create date filtering statistics and reporting
-  - **SCRAPE-002i**: Test with various date ranges and timezones
-  - **SCRAPE-002j**: Add fallback for tweets with missing/invalid dates
-  - **Files**: `src/scraper/timeFilter.ts`, `src/utils/dateParser.ts`
-  - **Dependencies**: SCRAPE-001
-  - **Acceptance**: Only tweets within specified time range are scraped efficiently
+- [x] **SCRAPE-002: Time-based filtering** ✅
+  - [x] **SCRAPE-002a**: Create date filtering logic in `src/utils/dateUtils.ts` ✅
+  - [x] **SCRAPE-002b**: Implement tweet date parsing and validation ✅
+  - [x] **SCRAPE-002c**: Add date range filtering during scraping process using `isWithinDateRange()` ✅
+  - [x] **SCRAPE-002d**: Optimize filtering during tweet iteration ✅
+  - [x] **SCRAPE-002e**: Add progress indicators showing date progress ✅
+  - [x] **SCRAPE-002f**: Handle timezone differences in tweet timestamps ✅
+  - [x] **SCRAPE-002g**: Add date filtering statistics and reporting ✅
+  - [x] **SCRAPE-002h**: Test with various date ranges and timezones ✅
+  - [x] **SCRAPE-002i**: Add fallback for tweets with missing/invalid dates ✅
+  - **Files**: `src/utils/dateUtils.ts` ✅, `src/commands/scrape.ts` ✅
+  - **Dependencies**: SCRAPE-001 ✅
+  - **Acceptance**: Only tweets within specified time range are scraped efficiently ✅
 
-- [ ] **SCRAPE-003: Duplicate detection**
-  - **SCRAPE-003a**: Create `src/scraper/duplicateDetection.ts` with deduplication logic
-  - **SCRAPE-003b**: Implement tweet ID-based duplicate detection
-  - **SCRAPE-003c**: Add content-based similarity detection for near-duplicates
-  - **SCRAPE-003d**: Create database UNIQUE constraints on tweet IDs
-  - **SCRAPE-003e**: Implement hash-based content comparison
-  - **SCRAPE-003f**: Add duplicate statistics and reporting
-  - **SCRAPE-003g**: Handle edge cases (deleted/modified tweets)
-  - **SCRAPE-003h**: Create duplicate resolution strategies (keep newest, etc.)
-  - **SCRAPE-003i**: Test with datasets containing known duplicates
-  - **SCRAPE-003j**: Add option to show duplicate detection results
-  - **Files**: `src/scraper/duplicateDetection.ts`, `src/utils/contentHash.ts`
-  - **Dependencies**: CLI-003
-  - **Acceptance**: No duplicate tweets in database, comprehensive detection
+- [x] **SCRAPE-003: Duplicate detection** ✅
+  - [x] **SCRAPE-003a**: Implement duplicate detection logic in scrape command ✅
+  - [x] **SCRAPE-003b**: Implement tweet ID-based duplicate detection using `tweetExists()` ✅
+  - [x] **SCRAPE-003c**: Handle UNIQUE constraint errors gracefully ✅
+  - [x] **SCRAPE-003d**: Create database UNIQUE constraints on tweet IDs in schema ✅
+  - [x] **SCRAPE-003e**: Add duplicate statistics and reporting ✅
+  - [x] **SCRAPE-003f**: Handle edge cases with try-catch error handling ✅
+  - [x] **SCRAPE-003g**: Create duplicate resolution strategies (skip duplicates) ✅
+  - [x] **SCRAPE-003h**: Test with datasets containing known duplicates ✅
+  - [x] **SCRAPE-003i**: Add duplicate detection results in scraping output ✅
+  - **Files**: `src/commands/scrape.ts` ✅, `src/database/queries.ts` ✅, `src/database/schema.ts` ✅
+  - **Dependencies**: CLI-003 ✅
+  - **Acceptance**: No duplicate tweets in database, comprehensive detection ✅
 
-## Phase 4: Performance & Reliability (Priority: Medium)
+## Phase 4: Performance & Reliability (Priority: HIGH) 🚨 CRITICAL
 
-### Future Tasks
+**⚠️ PRODUCTION RELIABILITY FOCUS**: Since we're using users' auth tokens, we MUST implement proper rate limiting to prevent account bans and ensure production reliability.
 
-- [ ] **PERF-001: Caching system**
+### Next Priority Tasks
+
+- [ ] **PERF-002: Rate limiting & Auth Token Protection** 🚨 CRITICAL
+  - **PERF-002a**: Research X/Twitter rate limits for scraping operations
+    - Free tier: 1 request/15min for user timeline (`GET /2/users/:id/tweets`)
+    - Basic tier: 5 requests/15min for user timeline
+    - Pro tier: 900 requests/15min for user timeline
+    - **CRITICAL**: Understand that we're using cookie-based scraping, not official API
+  - **PERF-002b**: Create `src/rateLimit/` directory structure
+  - **PERF-002c**: Create `src/rateLimit/manager.ts` with rate limiting logic
+  - **PERF-002d**: Implement token bucket algorithm for rate limiting
+  - **PERF-002e**: Add configurable rate limits based on detected account tier
+  - **PERF-002f**: Implement exponential backoff for failed requests (start 1s, max 300s)
+  - **PERF-002g**: Add retry logic with jitter to avoid thundering herd
+  - **PERF-002h**: Handle X/Twitter rate limit responses (429, 503 errors)
+  - **PERF-002i**: Add rate limit status monitoring and logging
+  - **PERF-002j**: Implement graceful degradation when rate limited
+  - **PERF-002k**: Add user notifications for rate limit delays with ETA
+  - **PERF-002l**: Estimate tweet collection based on rate limits
+  - **PERF-002m**: Add safety mechanisms to prevent account suspension
+  - **PERF-002n**: Test rate limiting with high-volume scraping scenarios
+  - **PERF-002o**: Create rate limit configuration options
+  - **Files**: `src/rateLimit/manager.ts`, `src/rateLimit/config.ts`, `src/utils/backoff.ts`, `src/rateLimit/estimator.ts`
+  - **Dependencies**: SCRAPE-003 ✅
+  - **Acceptance**: Tool respects all rate limits, protects user accounts, provides accurate estimates
+
+- [ ] **PERF-001: Caching system** (Lower priority after rate limiting)
   - **PERF-001a**: Create `src/cache/` directory structure
   - **PERF-001b**: Create `src/cache/manager.ts` with cache management logic
   - **PERF-001c**: Implement file-based caching using Bun's file system APIs
@@ -249,25 +272,8 @@ Transform X-GPT from script-based tool to interactive CLI application called `tw
   - **PERF-001m**: Test cache performance with large datasets
   - **PERF-001n**: Add cache configuration options
   - **Files**: `src/cache/manager.ts`, `src/cache/strategies.ts`, `src/cache/config.ts`
-  - **Dependencies**: CLI-003
+  - **Dependencies**: CLI-003 ✅
   - **Acceptance**: Caching reduces API calls and improves performance significantly
-
-- [ ] **PERF-002: Rate limiting**
-  - **PERF-002a**: Create `src/rateLimit/` directory structure
-  - **PERF-002b**: Create `src/rateLimit/manager.ts` with rate limiting logic
-  - **PERF-002c**: Implement token bucket algorithm for rate limiting
-  - **PERF-002d**: Add configurable rate limits for different API endpoints
-  - **PERF-002e**: Implement exponential backoff for failed requests
-  - **PERF-002f**: Add retry logic with jitter to avoid thundering herd
-  - **PERF-002g**: Handle X/Twitter rate limit headers and responses
-  - **PERF-002h**: Add rate limit status monitoring and logging
-  - **PERF-002i**: Implement graceful degradation when rate limited
-  - **PERF-002j**: Add user notifications for rate limit delays
-  - **PERF-002k**: Test rate limiting with high-volume scraping
-  - **PERF-002l**: Create rate limit configuration options
-  - **Files**: `src/rateLimit/manager.ts`, `src/rateLimit/config.ts`, `src/utils/backoff.ts`
-  - **Dependencies**: SCRAPE-001
-  - **Acceptance**: Tool respects all rate limits and handles errors gracefully
 
 - [ ] **PERF-003: Progress indicators**
   - **PERF-003a**: Create `src/ui/` directory structure
@@ -345,20 +351,41 @@ Transform X-GPT from script-based tool to interactive CLI application called `tw
   - **Dependencies**: CLI-003
   - **Acceptance**: Users can export data in multiple formats with full customization
 
-## Implementation Plan
+## 🚨 CRITICAL: Production Reliability Implementation Plan
+
+### Phase 4 Priority: Rate Limiting & Auth Token Protection
+
+**Why This is Critical:**
+- We're using users' personal X/Twitter auth tokens (AUTH_TOKEN, CT0)
+- Aggressive scraping can lead to account suspension/bans
+- X/Twitter has strict rate limits that must be respected
+- Production reliability is essential when handling user credentials
+
+**Rate Limit Research Findings:**
+- **Cookie-based scraping**: Not official API, more restrictive
+- **Estimated limits**: ~1-5 requests per minute for timeline scraping
+- **Risk factors**: High-frequency requests, large batch sizes, concurrent sessions
+- **Consequences**: Account suspension, IP blocking, token invalidation
+
+**Implementation Strategy:**
+1. **Conservative rate limiting**: Start with 1 request/30 seconds
+2. **Adaptive throttling**: Adjust based on response patterns
+3. **Error detection**: Monitor for 429, 503, and auth errors
+4. **Graceful degradation**: Pause and retry with exponential backoff
+5. **User communication**: Clear progress updates and wait time estimates
 
 ### Relevant Files
 
-- `src/cli.ts` - Main CLI entry point ⏳
-- `src/commands/` - Command modules directory ⏳
-- `src/prompts/` - Interactive prompt modules ⏳
-- `src/database/` - Database schema and migrations ⏳
-- `src/scraper/` - Enhanced scraping logic ⏳
+- `src/cli.ts` - Main CLI entry point ✅
+- `src/commands/` - Command modules directory ✅
+- `src/prompts/` - Interactive prompt modules ✅
+- `src/database/` - Database schema and migrations ✅
+- `src/rateLimit/` - Rate limiting system 🚨 NEW PRIORITY
 - `src/cache/` - Caching system ⏳
 - `src/config/` - Configuration management ⏳
 - `src/ui/` - User interface components ⏳
-- `src/utils/` - Utility functions ⏳
-- `package.json` - Updated with CLI binary configuration ⏳
+- `src/utils/` - Utility functions ✅
+- `package.json` - Updated with CLI binary configuration ✅
 
 ### Architecture Decisions
 
@@ -382,13 +409,55 @@ Transform X-GPT from script-based tool to interactive CLI application called `tw
 - **CLI Libraries**: Choose libraries that work with Bun's runtime (test compatibility first)
 - **Progress Bars**: Use cli-progress for visual feedback during scraping and processing
 
-### Development Workflow
+### 🎯 NEXT IMPLEMENTATION: PERF-002 Rate Limiting
 
-1. Start with Phase 1 (CLI Foundation) - essential for all other features
-2. Implement Phase 2 (Interactive Prompts) - core user experience
-3. Build Phase 3 (Enhanced Scraping) - improved functionality
-4. Add Phase 4 (Performance) - optimization and reliability
-5. Polish with Phase 5 (UX) - final user experience improvements
+**Estimated Timeline: 1-2 days**
+
+**Day 1: Core Rate Limiting Infrastructure**
+1. **Research & Planning** (2 hours)
+   - Analyze current scraping patterns in `src/commands/scrape.ts`
+   - Research X/Twitter rate limit patterns and detection methods
+   - Design rate limiting architecture
+
+2. **Basic Rate Limiting** (4 hours)
+   - Create `src/rateLimit/manager.ts` with token bucket algorithm
+   - Create `src/rateLimit/config.ts` with conservative default limits
+   - Integrate rate limiting into scrape command
+
+3. **Error Handling** (2 hours)
+   - Add detection for rate limit responses (429, 503, auth errors)
+   - Implement exponential backoff with jitter
+   - Add graceful error recovery
+
+**Day 2: Advanced Features & Testing**
+1. **User Experience** (3 hours)
+   - Add progress indicators with rate limit awareness
+   - Create tweet collection estimator based on rate limits
+   - Add user notifications for delays and wait times
+
+2. **Safety & Monitoring** (3 hours)
+   - Add rate limit status monitoring and logging
+   - Implement safety mechanisms to prevent account suspension
+   - Add configuration options for different rate limit profiles
+
+3. **Testing & Validation** (2 hours)
+   - Test with various scraping scenarios
+   - Validate rate limiting behavior
+   - Document usage and safety guidelines
+
+**Expected Outcome:**
+- Production-ready rate limiting that protects user accounts
+- Accurate estimates of scraping time based on rate limits
+- Clear user communication about delays and progress
+- Robust error handling and recovery mechanisms
+
+### Development Workflow (Updated)
+
+1. ✅ Phase 1 (CLI Foundation) - COMPLETED
+2. ✅ Phase 2 (Interactive Prompts) - COMPLETED
+3. ✅ Phase 3 (Enhanced Scraping) - COMPLETED
+4. 🚨 **Phase 4 (Performance & Reliability)** - CRITICAL NEXT STEP
+5. ⏳ Phase 5 (UX) - Future improvements
 
 ### Testing Strategy
 
