@@ -31,7 +31,18 @@ cd x-gpt
 bun install
 ```
 
-3. Set up environment variables:
+3. Install globally (optional):
+```bash
+bun link
+```
+
+After linking, you can use `xgpt` from anywhere:
+```bash
+xgpt --help
+xgpt interactive
+```
+
+4. Set up environment variables:
 ```bash
 cp .env.example .env
 ```
@@ -66,54 +77,64 @@ To scrape tweets, you need to extract session cookies from your X/Twitter accoun
 
 ## 📖 Usage
 
-### 1. Scrape Tweets
+### 🌟 Interactive Mode (Recommended)
 
-Extract tweets from any user:
-
-```bash
-bun run scrape.ts <username>
-```
-
-Example:
-```bash
-bun run scrape.ts elonmusk
-```
-
-This will:
-- Scrape up to 10,000 tweets from the specified user
-- Filter out retweets and replies
-- Save tweets to `tweets.json`
-
-### 2. Generate Embeddings
-
-Convert tweets to vector embeddings for semantic search:
+The easiest way to get started is with interactive mode:
 
 ```bash
-bun run src/embed.ts
+# Start interactive mode
+xgpt interactive
+
+# Or with a specific user
+xgpt interactive elonmusk
 ```
 
-This will:
-- Read tweets from `tweets.json`
-- Generate embeddings using OpenAI's `text-embedding-3-small` model
-- Save vectors to `vectors.json`
+The interactive mode guides you through:
 
-### 3. Ask Questions
+1. **👤 User Selection** - Enter Twitter username
+2. **🎯 Content Type** - Choose tweets, replies, or both
+3. **🔍 Search Scope** - All posts or keyword filtering
+4. **📅 Time Range** - Week, month, 3mo, 6mo, year, lifetime, or custom
+5. **⚙️ Options** - Max tweets, embeddings
+6. **📋 Summary** - Review configuration
+7. **🚀 Execution** - Automated scraping and processing
 
-Query the tweets using natural language:
+### 🛠 Direct Commands
+
+For advanced users, you can use direct commands:
 
 ```bash
-bun run src/ask.ts "What does this person think about AI?"
+# Scrape tweets with options
+xgpt scrape elonmusk --max 1000 --replies --retweets
+
+# Generate embeddings
+xgpt embed --model text-embedding-3-small --batch 500
+
+# Ask questions
+xgpt ask "What does this person think about AI?" --top 10
 ```
 
-Example queries:
-- `"What are their thoughts on programming?"`
-- `"Any mentions of startups or entrepreneurship?"`
-- `"What projects are they working on?"`
+### 📊 Smart Filtering Features
+
+- **Content filtering**: Replies, retweets, original tweets
+- **Keyword matching**: Case-insensitive, partial matching
+- **Date filtering**: Efficient time-based filtering
+- **Duplicate detection**: Prevents duplicate tweets
+- **Progress indicators**: Clear feedback during operations
+
+### 🎯 Example Queries
+
+```bash
+xgpt ask "What are their thoughts on programming?"
+xgpt ask "Any mentions of startups or entrepreneurship?"
+xgpt ask "What projects are they working on?"
+xgpt ask "What technologies does this person use?"
+```
 
 The system will:
-- Find the 5 most relevant tweets using semantic search
+- Find the most relevant tweets using semantic search
 - Generate a contextual answer using GPT-4o-mini
-- Respond in the style of the original user
+- Show similarity scores and source tweets
 
 ## 🛠️ Project Structure
 
@@ -132,13 +153,13 @@ x-gpt/
 
 ## 🗺️ Roadmap
 
-We're working on transforming X-GPT into a powerful CLI tool called `twtgpt`. Here's what's coming:
+We're working on transforming X-GPT into a powerful CLI tool called `xgpt`. Here's what's coming:
 
 ### 🎯 Planned Features
 
 #### Interactive CLI Interface
 ```bash
-twtgpt <username>
+xgpt interactive <username>
 ```
 
 The CLI will guide you through an interactive setup:

@@ -6,7 +6,7 @@
   "type": "module",
   "private": true,
   "bin": {
-    "twtgpt": "./src/cli.ts"
+    "xgpt": "./src/cli.ts"
   },
   "scripts": {
     "dev": "bun run src/cli.ts",
@@ -14,7 +14,8 @@
     "start": "bun run src/cli.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/cli-progress": "^3.11.6"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -22,6 +23,7 @@
   "dependencies": {
     "@inquirer/prompts": "^7.5.3",
     "@the-convocation/twitter-scraper": "^0.17.1",
+    "cli-progress": "^3.12.0",
     "commander": "^14.0.0",
     "dotenv": "^16.5.0",
     "openai": "^5.3.0"

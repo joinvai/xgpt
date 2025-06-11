@@ -7,7 +7,7 @@ function cosine(a: number[], b: number[]): number {
   let dot = 0;
   let normA = 0;
   let normB = 0;
-  
+
   for (let i = 0; i < a.length; i++) {
     const aVal = a[i] ?? 0;
     const bVal = b[i] ?? 0;
@@ -15,7 +15,7 @@ function cosine(a: number[], b: number[]): number {
     normA += aVal * aVal;
     normB += bVal * bVal;
   }
-  
+
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
@@ -42,7 +42,7 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
     // Read embeddings from file
     console.log(`📖 Loading embeddings from ${vectorFile}...`);
     let embeddings: TweetWithEmbedding[];
-    
+
     try {
       const fileContent = await readFile(vectorFile, "utf8");
       embeddings = JSON.parse(fileContent);
@@ -50,7 +50,7 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
       return {
         success: false,
         message: `Failed to read ${vectorFile}`,
-        error: `Please run 'twtgpt embed' first to generate embeddings. ${error instanceof Error ? error.message : ''}`
+        error: `Please run 'xgpt embed' first to generate embeddings. ${error instanceof Error ? error.message : ''}`
       };
     }
 
@@ -133,7 +133,7 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
     console.log("\n" + "=".repeat(60));
     console.log("📚 RELEVANT TWEETS:");
     console.log("=".repeat(60));
-    
+
     similarities.forEach((tweet, index) => {
       console.log(`${index + 1}. [${tweet.similarity.toFixed(3)}] ${tweet.text}`);
       if (tweet.user) console.log(`   👤 @${tweet.user}`);
@@ -161,7 +161,7 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     console.error("❌ Question answering failed:", errorMessage);
-    
+
     return {
       success: false,
       message: "Question answering failed",

@@ -10,6 +10,9 @@ Transform X-GPT from script-based tool to interactive CLI application called `tw
 - [x] Semantic search and Q&A system
 - [x] **CLI-001: Set up CLI framework** - Commander.js integration, help/version commands
 - [x] **CLI-002: Project restructuring** - Modular command structure with enhanced options
+- [x] **PROMPT-001: Content type selection** - Interactive prompts for tweets/replies/both
+- [x] **PROMPT-002: Search scope selection** - Keyword filtering with validation
+- [x] **PROMPT-003: Time range filtering** - Date range selection with custom options
 
 ## Phase 1: CLI Foundation (Priority: High)
 
@@ -47,90 +50,106 @@ Transform X-GPT from script-based tool to interactive CLI application called `tw
 
 ### Future Tasks
 
-- [ ] **CLI-003: Database migration setup (Bun SQLite)**
-  - **CLI-003a**: Create `src/database/` directory structure
-  - **CLI-003b**: Create `src/database/connection.ts` with Bun SQLite database connection
-  - **CLI-003c**: Design database schema for `tweets` table (id, text, user, created_at, metadata)
-  - **CLI-003d**: Design database schema for `embeddings` table (tweet_id, vector, model, created_at)
-  - **CLI-003e**: Design database schema for `users` table (username, display_name, last_scraped)
-  - **CLI-003f**: Design database schema for `scrape_sessions` table (id, user, filters, created_at)
-  - **CLI-003g**: Create `src/database/schema.ts` with table creation SQL and TypeScript types
-  - **CLI-003h**: Create `src/database/migrations.ts` with migration system
-  - **CLI-003i**: Add database initialization function that creates tables if not exist
-  - **CLI-003j**: Create `src/database/queries.ts` with common database operations
-  - **CLI-003k**: Update scrape command to save tweets to SQLite instead of JSON
-  - **CLI-003l**: Update embed command to save/load embeddings from SQLite
-  - **CLI-003m**: Update ask command to query embeddings from SQLite
-  - **CLI-003n**: Add data migration script to convert existing JSON files to SQLite
-  - **CLI-003o**: Test database operations with sample data
-  - **Files**: `src/database/connection.ts`, `src/database/schema.ts`, `src/database/migrations.ts`, `src/database/queries.ts`
+- [ ] **CLI-003: Database migration setup (Bun SQLite + Drizzle ORM)**
+  - **CLI-003a**: Install Drizzle ORM: `bun add drizzle-orm drizzle-kit`
+  - **CLI-003b**: Create `drizzle.config.ts` for Drizzle Kit configuration with Bun SQLite
+  - **CLI-003c**: Create `src/database/connection.ts` using `import { Database } from "bun:sqlite"`
+  - **CLI-003d**: Set up Drizzle with Bun SQLite: `drizzle({ client: sqlite })`
+  - **CLI-003e**: Enable WAL mode: `db.run("PRAGMA journal_mode = WAL;")` for performance
+  - **CLI-003f**: Design `tweets` table schema with Drizzle schema syntax (id, text, user, created_at, metadata)
+  - **CLI-003g**: Design `embeddings` table with vector storage (tweet_id, vector JSON, model, created_at)
+  - **CLI-003h**: Design `users` table for tracking scraped users (username, display_name, last_scraped)
+  - **CLI-003i**: Design `scrape_sessions` table for session metadata (id, user, filters, created_at)
+  - **CLI-003j**: Create `src/database/schema.ts` with all Drizzle table definitions
+  - **CLI-003k**: Set up Drizzle migrations with `drizzle-kit generate`
+  - **CLI-003l**: Create initial migration files for all tables using Drizzle Kit
+  - **CLI-003m**: Implement database initialization with `drizzle-kit migrate`
+  - **CLI-003n**: Create `src/database/queries.ts` with Drizzle query helpers and operations
+  - **CLI-003o**: Add database connection pooling and error handling for production use
+  - **Files**: `src/database/connection.ts`, `src/database/schema.ts`, `drizzle.config.ts`, `src/database/queries.ts`
   - **Dependencies**: CLI-002
-  - **Acceptance**: All data operations use Bun SQLite, JSON files are deprecated
+  - **Acceptance**: Drizzle ORM + Bun SQLite setup with migrations, WAL mode enabled, type-safe queries
 
-- [ ] **CLI-004: Bun SQLite integration testing**
-  - **CLI-004a**: Create `src/database/tests.ts` with unit tests for database operations
-  - **CLI-004b**: Test database connection and table creation
-  - **CLI-004c**: Test tweet insertion and retrieval with large datasets (10k+ records)
-  - **CLI-004d**: Test embedding storage and vector similarity queries
-  - **CLI-004e**: Test concurrent read/write operations
-  - **CLI-004f**: Create `benchmarks/sqlite-vs-json.ts` performance comparison
-  - **CLI-004g**: Benchmark tweet insertion speed (SQLite vs JSON)
-  - **CLI-004h**: Benchmark embedding query speed (SQLite vs JSON)
-  - **CLI-004i**: Test database file size vs JSON file size
-  - **CLI-004j**: Test memory usage during large operations
-  - **CLI-004k**: Create performance report with recommendations
-  - **Files**: `src/database/tests.ts`, `benchmarks/sqlite-vs-json.ts`, `benchmarks/performance-report.md`
+- [ ] **CLI-004: Data migration from JSON to SQLite**
+  - **CLI-004a**: Create migration script `src/database/migrate-json.ts` to read existing JSON files
+  - **CLI-004b**: Parse and validate `tweets.json` data before insertion using Drizzle schemas
+  - **CLI-004c**: Batch insert tweets using Drizzle's batch API: `db.insert(tweets).values(data)`
+  - **CLI-004d**: Migrate embeddings from `vectors.json` to embeddings table with proper indexing
+  - **CLI-004e**: Handle data validation and error recovery during migration process
+  - **CLI-004f**: Create backup of JSON files before migration starts
+  - **CLI-004g**: Add progress indicators for migration process using cli-progress
+  - **CLI-004h**: Verify data integrity after migration (count checks, sample validation)
+  - **CLI-004i**: Update all commands (scrape, embed, ask) to use SQLite instead of JSON
+  - **CLI-004j**: Add fallback to JSON if SQLite operations fail (graceful degradation)
+  - **CLI-004k**: Test migration with various dataset sizes (small, medium, large)
+  - **Files**: `src/database/migrate-json.ts`, `src/database/validation.ts`
   - **Dependencies**: CLI-003
-  - **Acceptance**: Bun SQLite outperforms JSON for large datasets, all tests pass
+  - **Acceptance**: All existing JSON data successfully migrated to SQLite with data integrity
+
+- [ ] **CLI-005: SQLite performance optimization**
+  - **CLI-005a**: Implement proper indexing for tweet searches (user, date, keywords) using Drizzle
+  - **CLI-005b**: Add indexes for embedding similarity searches and vector operations
+  - **CLI-005c**: Optimize vector storage (consider separate table for large embeddings if needed)
+  - **CLI-005d**: Implement connection pooling for concurrent operations using Bun SQLite
+  - **CLI-005e**: Add query performance monitoring and logging for slow queries
+  - **CLI-005f**: Test with large datasets (50k+ tweets, 10k+ embeddings) for scalability
+  - **CLI-005g**: Benchmark SQLite vs JSON performance (read/write operations, memory usage)
+  - **CLI-005h**: Implement database vacuum and optimization routines for maintenance
+  - **CLI-005i**: Add database size monitoring and cleanup for old data
+  - **CLI-005j**: Test concurrent read/write operations under load using Bun's async capabilities
+  - **CLI-005k**: Create performance report with recommendations and benchmarks
+  - **Files**: `src/database/optimization.ts`, `benchmarks/sqlite-performance.ts`, `benchmarks/performance-report.md`
+  - **Dependencies**: CLI-004
+  - **Acceptance**: SQLite performs 3x+ faster than JSON for large datasets, handles 50k+ tweets efficiently
 
 ## Phase 2: Interactive Prompts (Priority: High)
 
-### Future Tasks
+### Completed Tasks
 
-- [ ] **PROMPT-001: Content type selection**
-  - **PROMPT-001a**: Research Bun-compatible prompt libraries (inquirer.js alternatives)
-  - **PROMPT-001b**: Install chosen prompt library: `bun add @inquirer/prompts` or similar
-  - **PROMPT-001c**: Create `src/prompts/` directory structure
-  - **PROMPT-001d**: Create `src/prompts/contentType.ts` with content type selection logic
-  - **PROMPT-001e**: Implement radio button selection: "Tweets only", "Replies only", "Both"
-  - **PROMPT-001f**: Add input validation to ensure valid selection
-  - **PROMPT-001g**: Add default selection (Tweets only) for quick usage
-  - **PROMPT-001h**: Store user selection in session object for later use
-  - **PROMPT-001i**: Add help text explaining each option
-  - **PROMPT-001j**: Test prompt functionality and user experience
-  - **Files**: `src/prompts/contentType.ts`, `src/types/session.ts`
-  - **Dependencies**: CLI-001
-  - **Acceptance**: User can interactively select content type with validation
+- [x] **PROMPT-001: Content type selection** ✅
+  - [x] **PROMPT-001a**: Research Bun-compatible prompt libraries (@inquirer/prompts selected)
+  - [x] **PROMPT-001b**: Install chosen prompt library: `bun add @inquirer/prompts`
+  - [x] **PROMPT-001c**: Create `src/prompts/` directory structure
+  - [x] **PROMPT-001d**: Create `src/prompts/contentType.ts` with content type selection logic
+  - [x] **PROMPT-001e**: Implement radio button selection: "Tweets only", "Replies only", "Both"
+  - [x] **PROMPT-001f**: Add input validation to ensure valid selection
+  - [x] **PROMPT-001g**: Add default selection (Tweets only) for quick usage
+  - [x] **PROMPT-001h**: Store user selection in session object for later use
+  - [x] **PROMPT-001i**: Add help text explaining each option
+  - [x] **PROMPT-001j**: Test prompt functionality and user experience
+  - **Files**: `src/prompts/contentType.ts` ✅, `src/types/session.ts` ✅
+  - **Dependencies**: CLI-001 ✅
+  - **Acceptance**: User can interactively select content type with validation ✅
 
-- [ ] **PROMPT-002: Search scope selection**
-  - **PROMPT-002a**: Create `src/prompts/searchScope.ts` with scope selection logic
-  - **PROMPT-002b**: Implement radio button selection: "All posts", "Keyword filtered"
-  - **PROMPT-002c**: Add conditional keyword input when "Keyword filtered" is selected
-  - **PROMPT-002d**: Implement keyword input with placeholder text and examples
-  - **PROMPT-002e**: Add comma-separated keyword parsing and validation
-  - **PROMPT-002f**: Trim whitespace and handle empty keywords
-  - **PROMPT-002g**: Show example format: "AI, programming, typescript"
-  - **PROMPT-002h**: Add keyword preview/confirmation before proceeding
-  - **PROMPT-002i**: Store keywords array in session object
-  - **PROMPT-002j**: Add option to go back and modify keywords
-  - **Files**: `src/prompts/searchScope.ts`, `src/utils/keywordParser.ts`
-  - **Dependencies**: PROMPT-001
-  - **Acceptance**: User can select scope and enter validated keywords
+- [x] **PROMPT-002: Search scope selection** ✅
+  - [x] **PROMPT-002a**: Create `src/prompts/searchScope.ts` with scope selection logic
+  - [x] **PROMPT-002b**: Implement radio button selection: "All posts", "Keyword filtered"
+  - [x] **PROMPT-002c**: Add conditional keyword input when "Keyword filtered" is selected
+  - [x] **PROMPT-002d**: Implement keyword input with placeholder text and examples
+  - [x] **PROMPT-002e**: Add comma-separated keyword parsing and validation
+  - [x] **PROMPT-002f**: Trim whitespace and handle empty keywords
+  - [x] **PROMPT-002g**: Show example format: "AI, programming, typescript"
+  - [x] **PROMPT-002h**: Add keyword preview/confirmation before proceeding
+  - [x] **PROMPT-002i**: Store keywords array in session object
+  - [x] **PROMPT-002j**: Add option to go back and modify keywords
+  - **Files**: `src/prompts/searchScope.ts` ✅, keyword parsing integrated
+  - **Dependencies**: PROMPT-001 ✅
+  - **Acceptance**: User can select scope and enter validated keywords ✅
 
-- [ ] **PROMPT-003: Time range filtering**
-  - **PROMPT-003a**: Create `src/prompts/timeRange.ts` with time range selection
-  - **PROMPT-003b**: Create `src/utils/dateUtils.ts` with date calculation functions
-  - **PROMPT-003c**: Implement radio selection: "Last week", "Last month", "Last 3 months", etc.
-  - **PROMPT-003d**: Add "Custom range" option with date input prompts
-  - **PROMPT-003e**: Calculate start/end dates for each predefined range
-  - **PROMPT-003f**: Validate custom date inputs (format, logical order)
-  - **PROMPT-003g**: Display calculated date range for user confirmation
-  - **PROMPT-003h**: Store date range in session object (startDate, endDate)
-  - **PROMPT-003i**: Add timezone handling for accurate date filtering
-  - **PROMPT-003j**: Test date calculations with various timezones
-  - **Files**: `src/prompts/timeRange.ts`, `src/utils/dateUtils.ts`, `src/types/dateRange.ts`
-  - **Dependencies**: PROMPT-002
-  - **Acceptance**: User can select time ranges with accurate date calculations
+- [x] **PROMPT-003: Time range filtering** ✅
+  - [x] **PROMPT-003a**: Create `src/prompts/timeRange.ts` with time range selection
+  - [x] **PROMPT-003b**: Create `src/utils/dateUtils.ts` with date calculation functions
+  - [x] **PROMPT-003c**: Implement radio selection: "Last week", "Last month", "Last 3 months", etc.
+  - [x] **PROMPT-003d**: Add "Custom range" option with date input prompts
+  - [x] **PROMPT-003e**: Calculate start/end dates for each predefined range
+  - [x] **PROMPT-003f**: Validate custom date inputs (format, logical order)
+  - [x] **PROMPT-003g**: Display calculated date range for user confirmation
+  - [x] **PROMPT-003h**: Store date range in session object (startDate, endDate)
+  - [x] **PROMPT-003i**: Add timezone handling for accurate date filtering
+  - [x] **PROMPT-003j**: Test date calculations with various timezones
+  - **Files**: `src/prompts/timeRange.ts` ✅, `src/utils/dateUtils.ts` ✅, `src/types/session.ts` ✅
+  - **Dependencies**: PROMPT-002 ✅
+  - **Acceptance**: User can select time ranges with accurate date calculations ✅
 
 ## Phase 3: Enhanced Scraping (Priority: Medium)
 
@@ -315,19 +334,24 @@ Transform X-GPT from script-based tool to interactive CLI application called `tw
 ### Architecture Decisions
 
 1. **CLI Framework**: Use a lightweight CLI library compatible with Bun (avoid Node.js-specific libraries)
-2. **Database**: Bun's native `bun:sqlite` for local data persistence (NO external SQLite libraries)
-3. **Prompts**: Interactive CLI prompts with validation using Bun-compatible libraries
-4. **Caching**: File-based caching with TTL support using Bun's file system APIs
-5. **Error Handling**: Centralized error handling with user-friendly messages
-6. **Configuration**: JSON-based config files in user home directory using Bun's built-in JSON support
+2. **Database**: Bun's native `bun:sqlite` with Drizzle ORM for type-safe, performant data operations
+3. **ORM**: Drizzle ORM for schema management, migrations, and type-safe queries
+4. **Prompts**: Interactive CLI prompts with validation using Bun-compatible libraries
+5. **Progress Indicators**: cli-progress for visual feedback during long operations
+6. **Caching**: File-based caching with TTL support using Bun's file system APIs
+7. **Error Handling**: Centralized error handling with user-friendly messages
+8. **Configuration**: JSON-based config files in user home directory using Bun's built-in JSON support
 
 ### Bun-Specific Implementation Notes
 
-- **Database**: Use `import { Database } from "bun:sqlite"` exclusively
+- **Database**: Use `import { Database } from "bun:sqlite"` with Drizzle ORM wrapper
+- **ORM**: Drizzle ORM provides type safety, migrations, and optimized queries for Bun SQLite
+- **WAL Mode**: Enable Write-Ahead Logging for better concurrent performance
 - **File Operations**: Use Bun's built-in `Bun.file()` and `Bun.write()` when possible
 - **Process Management**: Use `Bun.$` for shell commands instead of external process libraries
 - **Environment**: Leverage Bun's automatic .env loading (no dotenv needed)
 - **CLI Libraries**: Choose libraries that work with Bun's runtime (test compatibility first)
+- **Progress Bars**: Use cli-progress for visual feedback during scraping and processing
 
 ### Development Workflow
 

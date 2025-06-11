@@ -3,7 +3,7 @@
 import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { scrapeCommand, embedCommand, askCommand } from './commands/index.js';
+import { scrapeCommand, embedCommand, askCommand, interactiveCommand } from './commands/index.js';
 
 // Read package.json for version info
 const packagePath = join(import.meta.dir, '..', 'package.json');
@@ -13,18 +13,35 @@ const program = new Command();
 
 // Configure the main program
 program
-  .name('twtgpt')
+  .name('xgpt')
   .description('AI-powered Twitter/X scraping and question-answering tool')
   .version(packageJson.version);
 
 // Add help examples
 program.addHelpText('after', `
 Examples:
-  $ twtgpt scrape elonmusk          # Scrape tweets from @elonmusk
-  $ twtgpt embed                    # Generate embeddings for scraped tweets
-  $ twtgpt ask "What about AI?"     # Ask questions about the tweets
-  $ twtgpt --help                   # Show this help message
+  $ xgpt interactive              # Interactive mode (recommended for new users)
+  $ xgpt interactive elonmusk     # Interactive mode for specific user
+  $ xgpt scrape elonmusk          # Direct scrape tweets from @elonmusk
+  $ xgpt embed                    # Generate embeddings for scraped tweets
+  $ xgpt ask "What about AI?"     # Ask questions about the tweets
+  $ xgpt --help                   # Show this help message
 `);
+
+// Interactive command (recommended for new users)
+program
+  .command('interactive')
+  .description('Interactive mode - guided setup for scraping and analysis')
+  .argument('[username]', 'Twitter username to scrape (optional)')
+  .action(async (username) => {
+    const result = await interactiveCommand(username);
+
+    if (!result.success) {
+      console.error(`❌ ${result.message}`);
+      if (result.error) console.error(`   ${result.error}`);
+      process.exit(1);
+    }
+  });
 
 // Scrape command
 program

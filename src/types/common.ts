@@ -25,8 +25,8 @@ export interface ScrapingOptions {
   keywords?: string[];
   maxTweets?: number;
   dateRange?: {
-    start?: Date;
-    end?: Date;
+    start: Date;
+    end: Date;
   };
 }
 
