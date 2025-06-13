@@ -8,17 +8,17 @@ import type { NewTweet, NewScrapeSession } from "../database/schema.js";
 import { RateLimitManager } from "../rateLimit/manager.js";
 import { RATE_LIMIT_PROFILES, getRateLimitProfile, isRateLimitError } from "../rateLimit/config.js";
 import { TweetEstimator } from "../rateLimit/estimator.js";
-import { 
-  handleCommandError, 
-  AuthenticationError, 
-  ValidationError, 
+import {
+  handleCommandError,
+  AuthenticationError,
+  ValidationError,
   RateLimitError,
   DatabaseError,
   NetworkError,
-  ErrorCategory 
+  ErrorCategory
 } from "../errors/index.js";
-import { 
-  createProgressBar, 
+import {
+  createProgressBar,
   ProgressPresets,
   withSpinner,
   StatusLine
@@ -70,10 +70,10 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
       await sessionQueries.updateSessionStatus(session.id, 'failed', {
         errorMessage: 'Missing authentication tokens'
       });
-      
+
       const authError = new AuthenticationError(
         'Twitter authentication tokens are missing or invalid',
-        { 
+        {
           command: 'scrape',
           username,
           operation: 'authentication_check'
@@ -253,30 +253,30 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
         // Insert tweets with progress tracking
         for (let i = 0; i < tweetBatch.length; i++) {
           const tweet = tweetBatch[i];
-          
+
           saveStatus.update(`💾 Saving tweets to database`, {
             total: tweetBatch.length,
             completed: i,
             skipped: duplicateCount
           });
-          
+
           try {
             // Check if tweet already exists
-            const existingTweet = await tweetQueries.tweetExists(tweet.id);
+            const existingTweet = await tweetQueries.tweetExists(tweet!.id!);
             if (existingTweet) {
               duplicateCount++;
               continue;
             }
 
             // Insert new tweet
-            await tweetQueries.insertTweets([tweet]);
+            await tweetQueries.insertTweets([tweet!]);
             savedCount++;
           } catch (error) {
             // If it's a duplicate constraint error, count as duplicate
             if (error instanceof Error && error.message.includes('UNIQUE constraint')) {
               duplicateCount++;
             } else {
-              console.error(`❌ Failed to save tweet ${tweet.id}:`, error);
+              console.error(`❌ Failed to save tweet ${tweet!.id}:`, error);
             }
           }
         }
@@ -291,12 +291,12 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
       // Handle scraping loop errors with detailed error categorization
       console.error("❌ Error during scraping loop:", scrapingError);
       rateLimiter.recordRequest(false, undefined, scrapingError);
-      
+
       // Check if it's a rate limit error and handle appropriately
       if (isRateLimitError(scrapingError)) {
         const rateLimitError = new RateLimitError(
           'Rate limit exceeded during tweet scraping',
-          { 
+          {
             command: 'scrape',
             username,
             operation: 'tweet_iteration',
@@ -305,7 +305,7 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
         );
         throw rateLimitError;
       }
-      
+
       // Re-throw for main error handler
       throw scrapingError;
     }

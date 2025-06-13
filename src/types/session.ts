@@ -3,26 +3,29 @@
 export interface SessionConfig {
   // Content type selection
   contentType: 'tweets' | 'replies' | 'both';
-  
+
   // Search scope
   searchScope: 'all' | 'keywords';
   keywords?: string[];
-  
+
   // Time range
   timeRange: 'week' | 'month' | '3months' | '6months' | 'year' | 'lifetime' | 'custom';
   customDateRange?: {
     start: Date;
     end: Date;
   };
-  
+
   // User and limits
   username: string;
   maxTweets: number;
-  
+
+  // Rate limiting
+  rateLimitProfile: string;
+
   // Processing options
   generateEmbeddings: boolean;
   embeddingModel: string;
-  
+
   // Output preferences
   outputFormat: 'json' | 'csv' | 'markdown';
   outputFile?: string;
@@ -40,6 +43,7 @@ export const DEFAULT_SESSION_CONFIG: Partial<SessionConfig> = {
   searchScope: 'all',
   timeRange: 'lifetime',
   maxTweets: 10000,
+  rateLimitProfile: 'conservative',
   generateEmbeddings: true,
   embeddingModel: 'text-embedding-3-small',
   outputFormat: 'json'
@@ -52,7 +56,7 @@ export const CONTENT_TYPE_OPTIONS = [
     description: 'Only original tweets (no replies or retweets)'
   },
   {
-    name: 'Replies only', 
+    name: 'Replies only',
     value: 'replies' as const,
     description: 'Only replies to other tweets'
   },

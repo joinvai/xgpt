@@ -61,7 +61,7 @@ export interface RateLimitConfig {
 }
 
 export const DEFAULT_CONFIG: RateLimitConfig = {
-  profile: RATE_LIMIT_PROFILES.conservative,
+  profile: RATE_LIMIT_PROFILES.conservative!,
   enableBackoff: true,
   maxBackoffMs: 300000, // 5 minutes max backoff
   backoffMultiplier: 2,
@@ -115,7 +115,7 @@ export const RATE_LIMIT_ERROR_MESSAGES = [
  * Get rate limit profile by name with fallback to conservative
  */
 export function getRateLimitProfile(profileName: string): RateLimitProfile {
-  return RATE_LIMIT_PROFILES[profileName] || RATE_LIMIT_PROFILES.conservative;
+  return RATE_LIMIT_PROFILES[profileName as keyof typeof RATE_LIMIT_PROFILES] || RATE_LIMIT_PROFILES.conservative!;
 }
 
 /**

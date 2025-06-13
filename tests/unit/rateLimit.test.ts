@@ -104,7 +104,7 @@ describe("Rate Limit Manager", () => {
 
 describe("Tweet Estimator", () => {
   it("should estimate collection time accurately", () => {
-    const profile = RATE_LIMIT_PROFILES.conservative;
+    const profile = RATE_LIMIT_PROFILES.conservative!;
     const estimate = TweetEstimator.estimateCollectionTime(120, profile);
     
     // Conservative profile: 2 req/min, so 120 tweets should take 60 minutes
@@ -120,8 +120,8 @@ describe("Tweet Estimator", () => {
     expect(comparisons.aggressive).toBeDefined();
     
     // Aggressive should be faster than conservative
-    expect(comparisons.aggressive.estimatedMinutes).toBeLessThan(
-      comparisons.conservative.estimatedMinutes
+    expect(comparisons.aggressive!.estimatedMinutes).toBeLessThan(
+      comparisons.conservative!.estimatedMinutes
     );
   });
 
@@ -145,7 +145,7 @@ describe("Tweet Estimator", () => {
       50, // collected
       100, // target
       startTime,
-      RATE_LIMIT_PROFILES.conservative
+      RATE_LIMIT_PROFILES.conservative!
     );
     
     expect(progress.percentage).toBe(50);
@@ -154,7 +154,7 @@ describe("Tweet Estimator", () => {
   });
 
   it("should format estimates for display", () => {
-    const estimate = TweetEstimator.estimateCollectionTime(100, RATE_LIMIT_PROFILES.conservative);
+    const estimate = TweetEstimator.estimateCollectionTime(100, RATE_LIMIT_PROFILES.conservative!);
     const formatted = TweetEstimator.formatEstimate(estimate);
     
     expect(formatted).toContain("Estimated collection time");
@@ -173,7 +173,7 @@ describe("Rate Limiting Integration", () => {
       });
       
       const status = manager.getStatus();
-      expect(status.profile).toBe(RATE_LIMIT_PROFILES[profileName].name);
+      expect(status.profile).toBe(RATE_LIMIT_PROFILES[profileName as keyof typeof RATE_LIMIT_PROFILES]!.name);
     });
   });
 

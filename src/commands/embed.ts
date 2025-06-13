@@ -1,18 +1,19 @@
 import OpenAI from "openai";
 import "dotenv/config";
 import type { Tweet, TweetWithEmbedding, EmbeddingOptions, CommandResult } from "../types/common.js";
+import type { ProgressContext } from "../ui/index.js";
 import { tweetQueries, embeddingQueries } from "../database/queries.js";
 import type { NewEmbedding } from "../database/schema.js";
 import { loadConfig } from "../config/manager.js";
-import { 
-  handleCommandError, 
-  AuthenticationError, 
+import {
+  handleCommandError,
+  AuthenticationError,
   DatabaseError,
   NetworkError,
-  ErrorCategory 
+  ErrorCategory
 } from "../errors/index.js";
-import { 
-  createProgressBar, 
+import {
+  createProgressBar,
   ProgressPresets,
   withSpinner,
   StatusLine
@@ -44,7 +45,7 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
     if (!apiKey) {
       const authError = new AuthenticationError(
         'OpenAI API key is missing or invalid',
-        { 
+        {
           command: 'embed',
           operation: 'api_key_check'
         }
@@ -103,23 +104,25 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
 
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
-      
+
       // Update progress context
       progressBar.update(processedCount, {
-        batchNumber: i + 1,
-        totalBatches: chunks.length,
-        processed: processedCount
-      });
+        processed: processedCount,
+        metadata: {
+          batchNumber: i + 1,
+          totalBatches: chunks.length
+        }
+      } as Partial<ProgressContext>);
 
       try {
         const response = await openai.embeddings.create({
           model,
-          input: chunk.map(tweet => tweet.text)
+          input: chunk!.map(tweet => tweet.text)
         });
 
         // Combine tweets with their embeddings
         response.data.forEach((embeddingData, index) => {
-          const tweet = chunk[index];
+          const tweet = chunk![index];
           if (tweet) {
             // For legacy compatibility (vectors.json format)
             embeddings.push({
@@ -137,12 +140,14 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
           }
         });
 
-        processedCount += chunk.length;
+        processedCount += chunk!.length;
         progressBar.update(processedCount, {
-          batchNumber: i + 1,
-          totalBatches: chunks.length,
-          processed: processedCount
-        });
+          processed: processedCount,
+          metadata: {
+            batchNumber: i + 1,
+            totalBatches: chunks.length
+          }
+        } as Partial<ProgressContext>);
 
         // Small delay to respect rate limits
         if (i < chunks.length - 1) {
@@ -177,7 +182,7 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
         console.error(`❌ Failed to save embeddings to database:`, error);
         const dbError = new DatabaseError(
           'Failed to save embeddings to database',
-          { 
+          {
             command: 'embed',
             operation: 'database_save',
             metadata: { embeddingCount: embeddingBatch.length }

@@ -67,7 +67,7 @@ export async function interactiveCommand(username?: string): Promise<CommandResu
 
     // Step 4: Time range selection
     session.step = 'time-range';
-    const timeResult = await promptTimeRange(userConfig.scraping.defaultTimeRange);
+    const timeResult = await promptTimeRange(userConfig.scraping.defaultTimeRange as 'lifetime' | 'week' | 'month' | '3months' | '6months' | 'year' | 'custom' | undefined);
     session.config.timeRange = timeResult.timeRange;
     session.config.customDateRange = timeResult.customDateRange;
 
@@ -97,11 +97,11 @@ export async function interactiveCommand(username?: string): Promise<CommandResu
       message: 'Select rate limiting profile:',
       choices: getAvailableProfiles().map(profileName => {
         const profile = RATE_LIMIT_PROFILES[profileName];
-        const estimate = TweetEstimator.estimateCollectionTime(parseInt(maxTweets), profile);
+        const estimate = TweetEstimator.estimateCollectionTime(parseInt(maxTweets), profile!);
         return {
-          name: `${profile.name} - ${profile.description} (${estimate.estimatedMinutes}min for ${maxTweets} tweets)`,
+          name: `${profile!.name} - ${profile!.description} (${estimate.estimatedMinutes}min for ${maxTweets} tweets)`,
           value: profileName,
-          description: `${profile.riskLevel.toUpperCase()} RISK - ${profile.requestsPerMinute} req/min`
+          description: `${profile!.riskLevel.toUpperCase()} RISK - ${profile!.requestsPerMinute} req/min`
         };
       }),
       default: userConfig.scraping.rateLimitProfile

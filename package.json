@@ -11,7 +11,20 @@
   "scripts": {
     "dev": "bun run src/cli.ts",
     "build": "bun build src/cli.ts --outdir ./dist --target bun",
-    "start": "bun run src/cli.ts"
+    "start": "bun run src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun run test-modules.ts",
+    "test:modules": "bun run test-modules.ts",
+    "test:basic": "bun run test-basic.ts",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "test:smoke": "bun test tests/smoke.test.ts",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:e2e": "bun test tests/e2e",
+    "test:quick": "bun run test:modules",
+    "test:all": "bun run tests/run-all-tests.ts",
+    "test:ci": "bun run test:modules"
   },
   "devDependencies": {
     "@types/bun": "latest",

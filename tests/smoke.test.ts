@@ -71,7 +71,7 @@ describe("Smoke Tests - Basic Functionality", () => {
     const result = await runCLI(["scrape", "--help"]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("scrape") && expect(result.stdout).toContain("tweets");
+    expect(result.stdout.includes("scrape") && result.stdout.includes("tweets")).toBe(true);
   });
 
   it("Should handle invalid commands gracefully", async () => {
@@ -85,7 +85,7 @@ describe("Smoke Tests - Basic Functionality", () => {
     const result = await runCLI(["scrape"]);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("username") || expect(result.stderr).toContain("required");
+    expect(result.stderr.includes("username") || result.stderr.includes("required")).toBe(true);
   });
 
   it("Should handle missing auth tokens gracefully", async () => {
@@ -127,7 +127,7 @@ describe("Smoke Tests - Rate Limiting", () => {
     const { TweetEstimator } = await import("../src/rateLimit/estimator.js");
     const { RATE_LIMIT_PROFILES } = await import("../src/rateLimit/config.js");
 
-    const estimate = TweetEstimator.estimateCollectionTime(100, RATE_LIMIT_PROFILES.conservative);
+    const estimate = TweetEstimator.estimateCollectionTime(100, RATE_LIMIT_PROFILES.conservative!);
 
     expect(estimate.estimatedMinutes).toBeGreaterThan(0);
     expect(estimate.tweetsPerHour).toBeGreaterThan(0);
@@ -241,6 +241,6 @@ describe("Smoke Tests - Error Handling", () => {
     const result = await runCLI(["scrape"]);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("username") || expect(result.stderr).toContain("required");
+    expect(result.stderr.includes("username") || result.stderr.includes("required")).toBe(true);
   });
 });

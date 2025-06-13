@@ -4,10 +4,10 @@
  */
 
 import {
-  RateLimitConfig,
-  RateLimitProfile,
-  RequestLog,
-  RateLimitStatus,
+  type RateLimitConfig,
+  type RateLimitProfile,
+  type RequestLog,
+  type RateLimitStatus,
   DEFAULT_CONFIG,
   isRateLimitError,
   addJitter,
@@ -139,7 +139,7 @@ export class RateLimitManager {
     const averageDelay = this.requestHistory.length > 1
       ? this.requestHistory.slice(1).reduce((sum, req, i) => {
           const prevReq = this.requestHistory[i];
-          return sum + (req.timestamp - prevReq.timestamp);
+          return sum + (req.timestamp - prevReq!.timestamp);
         }, 0) / (this.requestHistory.length - 1)
       : this.config.profile.minDelayMs;
 

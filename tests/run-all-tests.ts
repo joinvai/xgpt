@@ -160,12 +160,12 @@ class TestRunner {
 
   private extractPassedCount(output: string): number {
     const match = output.match(/(\d+) pass/);
-    return match ? parseInt(match[1]) : 0;
+    return match ? parseInt(match[1]!) : 0;
   }
 
   private extractFailedCount(output: string): number {
     const match = output.match(/(\d+) fail/);
-    return match ? parseInt(match[1]) : 0;
+    return match ? parseInt(match[1]!) : 0;
   }
 
   private async generateReport(): Promise<void> {
@@ -203,7 +203,7 @@ class TestRunner {
     console.log();
 
     // Determine overall result
-    const requiredSuites = this.results.filter((_, i) => TEST_SUITES[i].required);
+    const requiredSuites = this.results.filter((_, i) => TEST_SUITES[i]!.required);
     const requiredPassed = requiredSuites.every(r => r.success);
     const allPassed = this.results.every(r => r.success);
 

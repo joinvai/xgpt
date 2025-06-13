@@ -25,7 +25,7 @@ export const userQueries = {
         })
         .where(eq(users.id, existingUser.id))
         .returning();
-      return updatedUser;
+      return updatedUser!;
     }
 
     // Create new user
@@ -39,7 +39,7 @@ export const userQueries = {
         updatedAt: new Date()
       })
       .returning();
-    return newUser;
+    return newUser!;
   },
 
   // Get user by username
@@ -133,7 +133,11 @@ export const tweetQueries = {
 
   // Get tweets without embeddings
   async getTweetsWithoutEmbeddings(username?: string): Promise<Tweet[]> {
-    let query = db
+    const whereCondition = username 
+      ? and(sql`${embeddings.id} IS NULL`, eq(tweets.username, username))
+      : sql`${embeddings.id} IS NULL`;
+
+    return await db
       .select({
         id: tweets.id,
         text: tweets.text,
@@ -150,13 +154,7 @@ export const tweetQueries = {
       })
       .from(tweets)
       .leftJoin(embeddings, eq(tweets.id, embeddings.tweetId))
-      .where(sql`${embeddings.id} IS NULL`);
-
-    if (username) {
-      query = query.where(and(sql`${embeddings.id} IS NULL`, eq(tweets.username, username)));
-    }
-
-    return await query;
+      .where(whereCondition);
   }
 };
 
@@ -171,7 +169,7 @@ export const embeddingQueries = {
 
   // Get embeddings for similarity search
   async getEmbeddingsForSearch(username?: string): Promise<any[]> {
-    let query = db
+    const query = db
       .select({
         // Embedding fields
         embeddingId: embeddings.id,
@@ -197,7 +195,7 @@ export const embeddingQueries = {
       .innerJoin(tweets, eq(embeddings.tweetId, tweets.id));
 
     if (username) {
-      query = query.where(eq(tweets.username, username));
+      return await query.where(eq(tweets.username, username));
     }
 
     return await query;
@@ -210,15 +208,17 @@ export const embeddingQueries = {
 
   // Get embedding count
   async getEmbeddingCount(username?: string): Promise<number> {
-    let query = db.select({ count: count() }).from(embeddings);
-
     if (username) {
-      query = query
+      const result = await db
+        .select({ count: count() })
+        .from(embeddings)
         .innerJoin(tweets, eq(embeddings.tweetId, tweets.id))
-        .where(eq(tweets.username, username));
+        .where(eq(tweets.username, username))
+        .get();
+      return result?.count || 0;
     }
 
-    const result = await query.get();
+    const result = await db.select({ count: count() }).from(embeddings).get();
     return result?.count || 0;
   }
 };
@@ -228,7 +228,7 @@ export const sessionQueries = {
   // Create scrape session
   async createSession(sessionData: NewScrapeSession): Promise<ScrapeSession> {
     const [session] = await db.insert(scrapeSessions).values(sessionData).returning();
-    return session;
+    return session!;
   },
 
   // Update session status
@@ -276,10 +276,10 @@ export const statsQueries = {
     const [sessionCount] = await db.select({ count: count() }).from(scrapeSessions);
 
     return {
-      users: userCount.count,
-      tweets: tweetCount.count,
-      embeddings: embeddingCount.count,
-      sessions: sessionCount.count
+      users: userCount?.count || 0,
+      tweets: tweetCount?.count || 0,
+      embeddings: embeddingCount?.count || 0,
+      sessions: sessionCount?.count || 0
     };
   },
 

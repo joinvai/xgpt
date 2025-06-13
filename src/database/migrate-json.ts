@@ -213,7 +213,7 @@ async function validateJsonData(tweets: Tweet[], embeddings: TweetWithEmbedding[
   // Validate tweets structure
   for (let i = 0; i < tweets.length; i++) {
     const tweet = tweets[i];
-    if (!tweet.id || !tweet.text || !tweet.user) {
+    if (!tweet || !tweet.id || !tweet.text || !tweet.user) {
       const error = `Tweet at index ${i} missing required fields (id, text, user)`;
       stats.errors.push(error);
       throw new Error(error);
@@ -223,7 +223,7 @@ async function validateJsonData(tweets: Tweet[], embeddings: TweetWithEmbedding[
   // Validate embeddings structure
   for (let i = 0; i < embeddings.length; i++) {
     const embedding = embeddings[i];
-    if (!embedding.id || !embedding.vec || !Array.isArray(embedding.vec)) {
+    if (!embedding || !embedding.id || !embedding.vec || !Array.isArray(embedding.vec)) {
       const error = `Embedding at index ${i} missing required fields (id, vec array)`;
       stats.errors.push(error);
       throw new Error(error);
@@ -261,18 +261,18 @@ async function migrateTweets(tweets: Tweet[], config: MigrationConfig, stats: Mi
       for (const tweet of batch) {
         try {
           // Get or create user
-          let userId = userMap.get(tweet.user);
+          let userId = userMap.get(tweet.user!);
           if (!userId) {
-            const existingUser = await userQueries.getUserByUsername(tweet.user);
+            const existingUser = await userQueries.getUserByUsername(tweet.user!);
             if (existingUser) {
               userId = existingUser.id;
             } else {
               // Create new user using upsertUser
-              const newUser = await userQueries.upsertUser(tweet.user, tweet.user);
+              const newUser = await userQueries.upsertUser(tweet.user!, tweet.user!);
               userId = newUser.id;
               stats.usersCreated++;
             }
-            userMap.set(tweet.user, userId);
+            userMap.set(tweet.user!, userId);
           }
 
           // Prepare tweet data for insertion
@@ -280,7 +280,7 @@ async function migrateTweets(tweets: Tweet[], config: MigrationConfig, stats: Mi
             id: tweet.id,
             text: tweet.text,
             userId: userId,
-            username: tweet.user,
+            username: tweet.user!,
             createdAt: tweet.created_at ? new Date(tweet.created_at) : new Date(),
             scrapedAt: new Date(),
             isRetweet: tweet.metadata?.isRetweet || false,

@@ -4,7 +4,7 @@
  */
 
 import {
-  RateLimitProfile,
+  type RateLimitProfile,
   RATE_LIMIT_PROFILES,
   getRecommendedMaxTweets
 } from './config.js';
@@ -132,15 +132,15 @@ export class TweetEstimator {
       .sort((a, b) => {
         // Prefer lower risk profiles when multiple options are feasible
         const riskOrder = { low: 0, medium: 1, high: 2 };
-        const aRisk = RATE_LIMIT_PROFILES[a[0]].riskLevel;
-        const bRisk = RATE_LIMIT_PROFILES[b[0]].riskLevel;
+        const aRisk = RATE_LIMIT_PROFILES[a[0] as keyof typeof RATE_LIMIT_PROFILES]!.riskLevel;
+        const bRisk = RATE_LIMIT_PROFILES[b[0] as keyof typeof RATE_LIMIT_PROFILES]!.riskLevel;
         return riskOrder[aRisk] - riskOrder[bRisk];
       });
 
     if (feasibleProfiles.length > 0) {
-      const [profileName, estimate] = feasibleProfiles[0];
+      const [profileName, estimate] = feasibleProfiles[0]!;
       return {
-        profile: RATE_LIMIT_PROFILES[profileName],
+        profile: RATE_LIMIT_PROFILES[profileName as keyof typeof RATE_LIMIT_PROFILES]!,
         estimate,
         feasible: true
       };
@@ -148,8 +148,8 @@ export class TweetEstimator {
 
     // If no profile can complete in time, return the fastest (aggressive)
     return {
-      profile: RATE_LIMIT_PROFILES.aggressive,
-      estimate: comparisons.aggressive,
+      profile: RATE_LIMIT_PROFILES.aggressive!,
+      estimate: comparisons.aggressive!,
       feasible: false
     };
   }
@@ -210,7 +210,7 @@ export class TweetEstimator {
       alternatives.push(`⏰ Allow ${neededTime} minutes for ${tweetCount} tweets`);
       
       // Suggest more aggressive profile if available
-      const aggressive = RATE_LIMIT_PROFILES.aggressive;
+      const aggressive = RATE_LIMIT_PROFILES.aggressive!;
       const aggressiveEstimate = this.estimateCollectionTime(tweetCount, aggressive);
       if (aggressiveEstimate.estimatedMinutes <= maxTimeMinutes) {
         alternatives.push(`⚡ Use Aggressive profile (higher risk) to complete in ${aggressiveEstimate.estimatedMinutes} minutes`);

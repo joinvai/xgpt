@@ -242,15 +242,15 @@ export class MultiStepProgress extends ProgressIndicator {
     if (this.options.steps && this.currentStepIndex < this.options.steps.length - 1) {
       // Mark current step as complete
       const currentStep = this.options.steps[this.currentStepIndex];
-      const currentBar = this.bars.get(currentStep);
+      const currentBar = this.bars.get(currentStep!);
       if (currentBar) {
-        currentBar.update(currentBar.getTotal(), { status: 'Completed ✓' });
+        currentBar.update(100, { status: 'Completed ✓' });
       }
       
       // Move to next step
       this.currentStepIndex++;
       const nextStep = this.options.steps[this.currentStepIndex];
-      const nextBar = this.bars.get(nextStep);
+      const nextBar = this.bars.get(nextStep!);
       if (nextBar) {
         nextBar.update(0, { status: 'In Progress' });
       }
@@ -265,9 +265,9 @@ export class MultiStepProgress extends ProgressIndicator {
     // Mark current step as failed
     if (this.options.steps) {
       const currentStep = this.options.steps[this.currentStepIndex];
-      const currentBar = this.bars.get(currentStep);
+      const currentBar = this.bars.get(currentStep!);
       if (currentBar) {
-        currentBar.update(currentBar.getValue(), { status: 'Failed ✗' });
+        currentBar.update(0, { status: 'Failed ✗' });
       }
     }
     
@@ -322,7 +322,6 @@ export const ProgressPresets = {
     title: '🔄 Migrating data',
     showPercentage: true,
     showValue: true,
-    steps: ['Reading JSON files', 'Validating data', 'Inserting records', 'Verifying integrity'],
-    type: 'multi' as const
+    steps: ['Reading JSON files', 'Validating data', 'Inserting records', 'Verifying integrity']
   })
 };

@@ -151,7 +151,7 @@ describe("Complete Workflow Tests", () => {
       expect(result.stdout).toContain("embedding");
     } else {
       // Should provide helpful error message
-      expect(result.stderr).toContain("tweets") || expect(result.stderr).toContain("OPENAI_API_KEY");
+      expect(result.stderr.includes("tweets") || result.stderr.includes("OPENAI_API_KEY")).toBe(true);
     }
   });
 
@@ -163,7 +163,7 @@ describe("Complete Workflow Tests", () => {
     expect([0, 1]).toContain(result.exitCode);
     
     if (result.exitCode !== 0) {
-      expect(result.stderr).toContain("embedding") || expect(result.stderr).toContain("tweets");
+      expect(result.stderr.includes("embedding") || result.stderr.includes("tweets")).toBe(true);
     }
   });
 });
@@ -180,7 +180,7 @@ describe("Error Recovery Tests", () => {
     
     // Should either recover or provide helpful error message
     if (result.exitCode !== 0) {
-      expect(result.stderr).toContain("database") || expect(result.stderr).toContain("corrupt");
+      expect(result.stderr.includes("database") || result.stderr.includes("corrupt")).toBe(true);
     }
 
     // Re-initialize should work
@@ -193,7 +193,7 @@ describe("Error Recovery Tests", () => {
     const result = await runCLI(["scrape", "testuser"], undefined);
     
     if (result.exitCode !== 0) {
-      expect(result.stderr).toContain("AUTH_TOKEN") || expect(result.stderr).toContain("environment");
+      expect(result.stderr.includes("AUTH_TOKEN") || result.stderr.includes("environment")).toBe(true);
     }
   });
 

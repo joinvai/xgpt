@@ -17,9 +17,9 @@ async function testRateLimiting() {
     
     // Test 1: Profiles exist
     console.log("   ✅ Rate limit profiles loaded");
-    console.log(`      - Conservative: ${RATE_LIMIT_PROFILES.conservative.requestsPerMinute} req/min`);
-    console.log(`      - Moderate: ${RATE_LIMIT_PROFILES.moderate.requestsPerMinute} req/min`);
-    console.log(`      - Aggressive: ${RATE_LIMIT_PROFILES.aggressive.requestsPerMinute} req/min`);
+    console.log(`      - Conservative: ${RATE_LIMIT_PROFILES.conservative!.requestsPerMinute} req/min`);
+    console.log(`      - Moderate: ${RATE_LIMIT_PROFILES.moderate!.requestsPerMinute} req/min`);
+    console.log(`      - Aggressive: ${RATE_LIMIT_PROFILES.aggressive!.requestsPerMinute} req/min`);
     
     // Test 2: Manager works
     const manager = new RateLimitManager();
@@ -27,7 +27,7 @@ async function testRateLimiting() {
     console.log(`   ✅ Rate limit manager initialized (profile: ${status.profile})`);
     
     // Test 3: Estimator works
-    const estimate = TweetEstimator.estimateCollectionTime(100, RATE_LIMIT_PROFILES.conservative);
+    const estimate = TweetEstimator.estimateCollectionTime(100, RATE_LIMIT_PROFILES.conservative!);
     console.log(`   ✅ Tweet estimator works (100 tweets = ${estimate.estimatedMinutes} minutes)`);
     
     // Test 4: Error detection
@@ -90,10 +90,10 @@ async function testCommands() {
     const askCmd = await import("./src/commands/ask.js");
     
     console.log("   ✅ Command modules loaded");
-    console.log(`      - Scrape command: ${scrapeCmd.scrapeCommand ? 'available' : 'missing'}`);
-    console.log(`      - Interactive command: ${interactiveCmd.interactiveCommand ? 'available' : 'missing'}`);
-    console.log(`      - Embed command: ${embedCmd.embedCommand ? 'available' : 'missing'}`);
-    console.log(`      - Ask command: ${askCmd.askCommand ? 'available' : 'missing'}`);
+    console.log(`      - Scrape command: ${scrapeCmd.scrapeCommand && typeof scrapeCmd.scrapeCommand === 'function' ? 'available' : 'missing'}`);
+    console.log(`      - Interactive command: ${interactiveCmd.interactiveCommand && typeof interactiveCmd.interactiveCommand === 'function' ? 'available' : 'missing'}`);
+    console.log(`      - Embed command: ${embedCmd.embedCommand && typeof embedCmd.embedCommand === 'function' ? 'available' : 'missing'}`);
+    console.log(`      - Ask command: ${askCmd.askCommand && typeof askCmd.askCommand === 'function' ? 'available' : 'missing'}`);
     
     return true;
   } catch (error) {

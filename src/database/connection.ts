@@ -46,7 +46,7 @@ export async function initializeDatabase() {
 export function checkDatabaseHealth(): boolean {
   try {
     // Simple query to check if database is accessible
-    const result = sqlite.query("SELECT 1 as health").get();
+    const result = sqlite.query("SELECT 1 as health").get() as { health: number } | null;
     return result?.health === 1;
   } catch (error) {
     console.error("❌ Database health check failed:", error);

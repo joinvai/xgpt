@@ -2,7 +2,7 @@ import { select, input, confirm } from '@inquirer/prompts';
 import { TIME_RANGE_OPTIONS, type SessionConfig } from '../types/session.js';
 import { calculateDateRange, formatDateRange, isValidDateString } from '../utils/dateUtils.js';
 
-export async function promptTimeRange(): Promise<{
+export async function promptTimeRange(defaultValue: SessionConfig['timeRange'] = 'lifetime'): Promise<{
   timeRange: SessionConfig['timeRange'];
   customDateRange?: { start: Date; end: Date };
 }> {
@@ -16,7 +16,7 @@ export async function promptTimeRange(): Promise<{
       value: option.value,
       description: option.description
     })),
-    default: 'lifetime'
+    default: defaultValue
   });
 
   let customDateRange: { start: Date; end: Date } | undefined;
@@ -24,7 +24,7 @@ export async function promptTimeRange(): Promise<{
   if (timeRange === 'custom') {
     console.log('\n📝 Custom Date Range');
     console.log('Enter your custom date range (YYYY-MM-DD format):\n');
-    
+
     const startDateInput = await input({
       message: 'Start date (YYYY-MM-DD):',
       validate: (input: string) => {
@@ -48,30 +48,30 @@ export async function promptTimeRange(): Promise<{
         if (!isValidDateString(input)) {
           return 'Please enter a valid date in YYYY-MM-DD format';
         }
-        
+
         const startDate = new Date(startDateInput);
         const endDate = new Date(input);
-        
+
         if (endDate <= startDate) {
           return 'End date must be after start date';
         }
-        
+
         if (endDate > new Date()) {
           return 'End date cannot be in the future';
         }
-        
+
         return true;
       }
     });
 
     const startDate = new Date(startDateInput);
     const endDate = new Date(endDateInput);
-    
+
     customDateRange = { start: startDate, end: endDate };
-    
+
     // Show confirmation
     console.log(`\n📊 Custom range: ${formatDateRange(startDate, endDate)}`);
-    
+
     const confirmed = await confirm({
       message: 'Is this date range correct?',
       default: true
@@ -85,14 +85,14 @@ export async function promptTimeRange(): Promise<{
 
   // Calculate and show the actual date range
   const dateRange = timeRange === 'custom' ? customDateRange! : calculateDateRange(timeRange);
-  
+
   // Show selection confirmation
   const selectedOption = TIME_RANGE_OPTIONS.find(opt => opt.value === timeRange);
   console.log(`\n✅ Selected: ${selectedOption?.name}`);
-  
+
   if (timeRange !== 'lifetime') {
     console.log(`   Date range: ${formatDateRange(dateRange.start, dateRange.end)}`);
-    
+
     const daysDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24));
     console.log(`   Duration: ${daysDiff} days`);
   } else {

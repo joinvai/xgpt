@@ -28,6 +28,7 @@ export interface ScrapingOptions {
     start: Date;
     end: Date;
   };
+  rateLimitProfile?: string;
 }
 
 export interface EmbeddingOptions {

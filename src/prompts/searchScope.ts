@@ -14,12 +14,15 @@ const SEARCH_SCOPE_OPTIONS = [
   }
 ];
 
-export async function promptSearchScope(): Promise<{
+export async function promptSearchScope(defaultKeywords: string[] = []): Promise<{
   searchScope: SessionConfig['searchScope'];
   keywords?: string[];
 }> {
   console.log('\n🔍 Step 2: Search Scope');
   console.log('Choose whether to scrape all posts or filter by keywords:\n');
+
+  // Determine default scope based on whether default keywords exist
+  const defaultScope = defaultKeywords.length > 0 ? 'keywords' : 'all';
 
   const searchScope = await select({
     message: 'What scope would you like to use?',
@@ -28,7 +31,7 @@ export async function promptSearchScope(): Promise<{
       value: option.value,
       description: option.description
     })),
-    default: 'all'
+    default: defaultScope
   });
 
   let keywords: string[] | undefined;
@@ -36,7 +39,7 @@ export async function promptSearchScope(): Promise<{
   if (searchScope === 'keywords') {
     console.log('\n📝 Keyword Configuration');
     console.log('Enter keywords to filter posts. Posts must contain at least one keyword.\n');
-    
+
     // Show examples
     console.log('💡 Examples:');
     console.log('   • AI, machine learning, chatgpt');
@@ -45,6 +48,7 @@ export async function promptSearchScope(): Promise<{
 
     const keywordInput = await input({
       message: 'Enter keywords (comma-separated):',
+      default: defaultKeywords.join(', '),
       validate: (input: string) => {
         if (!input.trim()) {
           return 'Please enter at least one keyword';
@@ -58,7 +62,7 @@ export async function promptSearchScope(): Promise<{
     });
 
     keywords = parseKeywords(keywordInput);
-    
+
     // Show parsed keywords for confirmation
     console.log('\n📋 Parsed keywords:');
     keywords.forEach((keyword, index) => {
@@ -99,7 +103,7 @@ export function matchesKeywords(text: string, keywords: string[]): boolean {
   if (!keywords || keywords.length === 0) {
     return true; // No keywords means match everything
   }
-  
+
   const lowerText = text.toLowerCase();
   return keywords.some(keyword => lowerText.includes(keyword));
 }
