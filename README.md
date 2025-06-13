@@ -1,5 +1,7 @@
 # X-GPT 🐦🤖
 
+![X-GPT GitHub Banner](.github/github.png)
+
 A powerful, production-ready CLI tool for AI-powered Twitter/X scraping and question-answering. Built with Bun, SQLite, and OpenAI's latest models for lightning-fast performance and intelligent analysis.
 
 ## ✨ Features
