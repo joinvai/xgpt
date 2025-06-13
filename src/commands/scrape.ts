@@ -6,6 +6,18 @@ import { matchesKeywords } from "../prompts/searchScope.js";
 import { isWithinDateRange } from "../utils/dateUtils.js";
 import { userQueries, tweetQueries, sessionQueries } from "../database/queries.js";
 import type { NewTweet, NewScrapeSession } from "../database/schema.js";
+import { RateLimitManager } from "../rateLimit/manager.js";
+import { RATE_LIMIT_PROFILES, getRateLimitProfile, isRateLimitError } from "../rateLimit/config.js";
+import { TweetEstimator } from "../rateLimit/estimator.js";
+import { 
+  handleCommandError, 
+  AuthenticationError, 
+  ValidationError, 
+  RateLimitError,
+  DatabaseError,
+  NetworkError,
+  ErrorCategory 
+} from "../errors/index.js";
 
 export async function scrapeCommand(options: ScrapingOptions): Promise<CommandResult> {
   const {
@@ -14,7 +26,8 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
     includeRetweets = false,
     maxTweets = 10000,
     keywords,
-    dateRange
+    dateRange,
+    rateLimitProfile = 'conservative'
   } = options;
 
   try {
@@ -52,12 +65,33 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
       await sessionQueries.updateSessionStatus(session.id, 'failed', {
         errorMessage: 'Missing authentication tokens'
       });
-      return {
-        success: false,
-        message: "Missing authentication tokens",
-        error: "Please set AUTH_TOKEN and CT0 environment variables. See README for cookie setup instructions."
-      };
+      
+      const authError = new AuthenticationError(
+        'Twitter authentication tokens are missing or invalid',
+        { 
+          command: 'scrape',
+          username,
+          operation: 'authentication_check'
+        }
+      );
+      return handleCommandError(authError);
     }
+
+    // Set up rate limiting for account protection
+    const profile = getRateLimitProfile(rateLimitProfile);
+    const rateLimiter = new RateLimitManager({ profile });
+
+    console.log(`🛡️  Rate limiting active: ${profile.name} profile (${profile.description})`);
+    console.log(`⚡ Rate: ${profile.requestsPerMinute} requests/min, ${profile.requestsPerHour} requests/hour`);
+
+    // Show collection time estimate
+    const estimate = TweetEstimator.estimateCollectionTime(maxTweets, profile);
+    console.log(TweetEstimator.formatEstimate(estimate));
+
+    if (estimate.warningMessage) {
+      console.log(`\n${estimate.warningMessage}`);
+    }
+    console.log();
 
     const scraper = new Scraper();
     await scraper.setCookies(cookies);
@@ -79,12 +113,14 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
     let filteredCount = 0;
     let keywordFilteredCount = 0;
     let dateFilteredCount = 0;
+    let rateLimitDelays = 0;
     const tweets: Tweet[] = [];
     const tweetBatch: NewTweet[] = [];
+    const startTime = Date.now();
 
-    // Create progress bar
+    // Create progress bar with rate limit awareness
     const progressBar = new cliProgress.SingleBar({
-      format: '🐦 Scraping |{bar}| {percentage}% | {value}/{total} tweets | Processed: {processed} | ETA: {eta}s',
+      format: '🐦 Scraping |{bar}| {percentage}% | {value}/{total} tweets | Processed: {processed} | Delays: {delays} | ETA: {eta}s',
       barCompleteChar: '\u2588',
       barIncompleteChar: '\u2591',
       hideCursor: true
@@ -92,128 +128,177 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
 
     // Start progress bar
     progressBar.start(maxTweets, 0, {
-      processed: 0
+      processed: 0,
+      delays: 0
     });
 
-    for await (const tweet of scraper.getTweets(username)) {
-      scrapedCount++;
-
-      // Apply content type filters
-      if (!includeRetweets && tweet.isRetweet) {
-        filteredCount++;
-        continue;
-      }
-
-      if (!includeReplies && tweet.isReply) {
-        filteredCount++;
-        continue;
-      }
-
-      // Apply date range filter
-      if (dateRange && tweet.timeParsed) {
-        if (!isWithinDateRange(tweet.timeParsed, dateRange.start, dateRange.end)) {
-          dateFilteredCount++;
-          continue;
-        }
-      }
-
-      // Apply keyword filter
-      if (keywords && keywords.length > 0) {
-        if (!matchesKeywords(tweet.text || '', keywords)) {
-          keywordFilteredCount++;
-          continue;
-        }
-      }
-
-      // Process and store tweet
-      const processedTweet: Tweet = {
-        id: tweet.id!,
-        text: (tweet.text ?? "").replace(/\s+/g, " ").trim(),
-        user: username,
-        created_at: tweet.timeParsed?.toISOString(),
-        metadata: {
-          isRetweet: tweet.isRetweet,
-          isReply: tweet.isReply,
-          likes: tweet.likes,
-          retweets: tweet.retweets,
-          replies: tweet.replies
-        }
-      };
-
-      // Prepare tweet for database insertion
-      const dbTweet: NewTweet = {
-        id: tweet.id!,
-        text: (tweet.text ?? "").replace(/\s+/g, " ").trim(),
-        userId: user.id,
-        username: username,
-        createdAt: tweet.timeParsed || new Date(),
-        isRetweet: tweet.isRetweet || false,
-        isReply: tweet.isReply || false,
-        likes: tweet.likes || 0,
-        retweets: tweet.retweets || 0,
-        replies: tweet.replies || 0,
-        metadata: JSON.stringify({
-          isRetweet: tweet.isRetweet,
-          isReply: tweet.isReply,
-          likes: tweet.likes,
-          retweets: tweet.retweets,
-          replies: tweet.replies
-        })
-      };
-
-      tweets.push(processedTweet);
-      tweetBatch.push(dbTweet);
-
-      // Update progress bar
-      progressBar.update(tweets.length, {
-        processed: scrapedCount
-      });
-
-      if (tweets.length >= maxTweets) {
-        progressBar.update(maxTweets, {
-          processed: scrapedCount
-        });
-        break;
-      }
-    }
-
-    // Stop progress bar
-    progressBar.stop();
-    console.log(`🎯 Scraping completed! Collected ${tweets.length} tweets from ${scrapedCount} processed.`);
-
-    // Save tweets to database (handle duplicates)
-    if (tweetBatch.length > 0) {
-      console.log(`💾 Saving ${tweetBatch.length} tweets to database...`);
-      let savedCount = 0;
-      let duplicateCount = 0;
-
-      // Insert tweets one by one to handle duplicates gracefully
-      for (const tweet of tweetBatch) {
+    try {
+      for await (const tweet of scraper.getTweets(username)) {
+        // Apply rate limiting before processing each tweet
         try {
-          // Check if tweet already exists
-          const existingTweet = await tweetQueries.tweetExists(tweet.id);
-          if (existingTweet) {
-            duplicateCount++;
+          await rateLimiter.waitForPermission();
+          rateLimiter.recordRequest(true); // Record successful request
+        } catch (error) {
+          rateLimitDelays++;
+          rateLimiter.recordRequest(false, undefined, error);
+
+          // Update progress bar to show delay
+          progressBar.update(tweets.length, {
+            processed: scrapedCount,
+            delays: rateLimitDelays
+          });
+
+          // Check if we should pause scraping
+          if (rateLimiter.shouldPauseScraping()) {
+            console.log('\n⚠️  Too many rate limit errors. Pausing scraping for account safety.');
+            break;
+          }
+
+          // Continue with next iteration after rate limit handling
+          continue;
+        }
+
+        scrapedCount++;
+
+        // Apply content type filters
+        if (!includeRetweets && tweet.isRetweet) {
+          filteredCount++;
+          continue;
+        }
+
+        if (!includeReplies && tweet.isReply) {
+          filteredCount++;
+          continue;
+        }
+
+        // Apply date range filter
+        if (dateRange && tweet.timeParsed) {
+          if (!isWithinDateRange(tweet.timeParsed, dateRange.start, dateRange.end)) {
+            dateFilteredCount++;
             continue;
           }
+        }
 
-          // Insert new tweet
-          await tweetQueries.insertTweets([tweet]);
-          savedCount++;
-        } catch (error) {
-          // If it's a duplicate constraint error, count as duplicate
-          if (error instanceof Error && error.message.includes('UNIQUE constraint')) {
-            duplicateCount++;
-          } else {
-            console.error(`❌ Failed to save tweet ${tweet.id}:`, error);
+        // Apply keyword filter
+        if (keywords && keywords.length > 0) {
+          if (!matchesKeywords(tweet.text || '', keywords)) {
+            keywordFilteredCount++;
+            continue;
           }
+        }
+
+        // Process and store tweet
+        const processedTweet: Tweet = {
+          id: tweet.id!,
+          text: (tweet.text ?? "").replace(/\s+/g, " ").trim(),
+          user: username,
+          created_at: tweet.timeParsed?.toISOString(),
+          metadata: {
+            isRetweet: tweet.isRetweet,
+            isReply: tweet.isReply,
+            likes: tweet.likes,
+            retweets: tweet.retweets,
+            replies: tweet.replies
+          }
+        };
+
+        // Prepare tweet for database insertion
+        const dbTweet: NewTweet = {
+          id: tweet.id!,
+          text: (tweet.text ?? "").replace(/\s+/g, " ").trim(),
+          userId: user.id,
+          username: username,
+          createdAt: tweet.timeParsed || new Date(),
+          isRetweet: tweet.isRetweet || false,
+          isReply: tweet.isReply || false,
+          likes: tweet.likes || 0,
+          retweets: tweet.retweets || 0,
+          replies: tweet.replies || 0,
+          metadata: JSON.stringify({
+            isRetweet: tweet.isRetweet,
+            isReply: tweet.isReply,
+            likes: tweet.likes,
+            retweets: tweet.retweets,
+            replies: tweet.replies
+          })
+        };
+
+        tweets.push(processedTweet);
+        tweetBatch.push(dbTweet);
+
+        // Update progress bar
+        progressBar.update(tweets.length, {
+          processed: scrapedCount,
+          delays: rateLimitDelays
+        });
+
+        if (tweets.length >= maxTweets) {
+          progressBar.update(maxTweets, {
+            processed: scrapedCount
+          });
+          break;
         }
       }
 
-      console.log(`✅ Successfully saved ${savedCount} new tweets to database`);
-      if (duplicateCount > 0) {
-        console.log(`ℹ️  Skipped ${duplicateCount} duplicate tweets`);
+      // Stop progress bar
+      progressBar.stop();
+      console.log(`🎯 Scraping completed! Collected ${tweets.length} tweets from ${scrapedCount} processed.`);
+
+      // Save tweets to database (handle duplicates)
+      if (tweetBatch.length > 0) {
+        console.log(`💾 Saving ${tweetBatch.length} tweets to database...`);
+        let savedCount = 0;
+        let duplicateCount = 0;
+
+        // Insert tweets one by one to handle duplicates gracefully
+        for (const tweet of tweetBatch) {
+          try {
+            // Check if tweet already exists
+            const existingTweet = await tweetQueries.tweetExists(tweet.id);
+            if (existingTweet) {
+              duplicateCount++;
+              continue;
+            }
+
+            // Insert new tweet
+            await tweetQueries.insertTweets([tweet]);
+            savedCount++;
+          } catch (error) {
+            // If it's a duplicate constraint error, count as duplicate
+            if (error instanceof Error && error.message.includes('UNIQUE constraint')) {
+              duplicateCount++;
+            } else {
+              console.error(`❌ Failed to save tweet ${tweet.id}:`, error);
+            }
+          }
+        }
+
+        console.log(`✅ Successfully saved ${savedCount} new tweets to database`);
+        if (duplicateCount > 0) {
+          console.log(`ℹ️  Skipped ${duplicateCount} duplicate tweets`);
+        }
       }
+    } catch (scrapingError) {
+      // Handle scraping loop errors with detailed error categorization
+      console.error("❌ Error during scraping loop:", scrapingError);
+      rateLimiter.recordRequest(false, undefined, scrapingError);
+      
+      // Check if it's a rate limit error and handle appropriately
+      if (isRateLimitError(scrapingError)) {
+        const rateLimitError = new RateLimitError(
+          'Rate limit exceeded during tweet scraping',
+          { 
+            command: 'scrape',
+            username,
+            operation: 'tweet_iteration',
+            metadata: { scrapedCount, tweetsCollected: tweets.length }
+          }
+        );
+        throw rateLimitError;
+      }
+      
+      // Re-throw for main error handler
+      throw scrapingError;
     }
 
     // Update session with final results
@@ -257,15 +342,12 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
     };
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    console.error("❌ Scraping failed:", errorMessage);
-
     // Update session status if session was created
     try {
-      // Try to find the session by username and update it
       const sessions = await sessionQueries.getSessionsByUser(username);
       const runningSession = sessions.find(s => s.status === 'running');
       if (runningSession) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
         await sessionQueries.updateSessionStatus(runningSession.id, 'failed', {
           errorMessage: errorMessage
         });
@@ -274,11 +356,12 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
       console.error("❌ Failed to update session status:", sessionError);
     }
 
-    return {
-      success: false,
-      message: "Scraping failed",
-      error: errorMessage
-    };
+    // Use comprehensive error handling
+    return handleCommandError(error, {
+      command: 'scrape',
+      username,
+      operation: 'tweet_scraping'
+    });
   }
 }
 

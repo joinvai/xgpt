@@ -3,6 +3,13 @@ export { scrapeCommand, scrapeUser } from './scrape.js';
 export { embedCommand, generateEmbeddings } from './embed.js';
 export { askCommand, askQuestion } from './ask.js';
 export { interactiveCommand } from './interactive.js';
+export {
+  listConfigCommand,
+  getConfigCommand,
+  setConfigCommand,
+  resetConfigCommand,
+  configInfoCommand
+} from './config.js';
 
 // Re-export types for convenience
 export type {

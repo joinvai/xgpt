@@ -3,18 +3,32 @@
 import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { scrapeCommand, embedCommand, askCommand, interactiveCommand } from './commands/index.js';
+import {
+  scrapeCommand,
+  embedCommand,
+  askCommand,
+  interactiveCommand,
+  listConfigCommand,
+  getConfigCommand,
+  setConfigCommand,
+  resetConfigCommand,
+  configInfoCommand
+} from './commands/index.js';
 import { initializeDatabase, checkDatabaseHealth, getDatabaseStats } from './database/connection.js';
 import { runMigration } from './database/migrate-json.js';
 import { statsQueries } from './database/queries.js';
 import { optimizeDatabase, getDatabaseMetrics, runPerformanceBenchmarks, monitorDatabaseSize } from './database/optimization.js';
 import { runBenchmarkCLI } from '../benchmarks/sqlite-performance.js';
+import { errorHandler } from './errors/index.js';
 
 // Read package.json for version info
 const packagePath = join(import.meta.dir, '..', 'package.json');
 const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
 
 const program = new Command();
+
+// Initialize error handler
+await errorHandler.initialize();
 
 // Configure the main program
 program
@@ -31,6 +45,8 @@ Examples:
   $ xgpt embed                    # Generate embeddings for scraped tweets
   $ xgpt ask "What about AI?"     # Ask questions about the tweets
   $ xgpt db --stats               # Show database statistics
+  $ xgpt config list              # Show all configuration settings
+  $ xgpt config set scraping.rateLimitProfile moderate  # Set rate limit profile
   $ xgpt --help                   # Show this help message
 `);
 
@@ -239,6 +255,74 @@ program
     });
   });
 
+// Configuration commands
+const configCommand = program
+  .command('config')
+  .description('Manage XGPT configuration settings');
+
+configCommand
+  .command('list')
+  .description('List all configuration settings')
+  .action(async () => {
+    const result = await listConfigCommand();
+    if (!result.success) {
+      console.error(`❌ ${result.message}`);
+      if (result.error) console.error(`   ${result.error}`);
+      process.exit(1);
+    }
+  });
+
+configCommand
+  .command('get')
+  .description('Get a configuration value')
+  .argument('<key>', 'Configuration key to get')
+  .action(async (key) => {
+    const result = await getConfigCommand(key);
+    if (!result.success) {
+      console.error(`❌ ${result.message}`);
+      if (result.error) console.error(`   ${result.error}`);
+      process.exit(1);
+    }
+  });
+
+configCommand
+  .command('set')
+  .description('Set a configuration value')
+  .argument('<key>', 'Configuration key to set')
+  .argument('<value>', 'Value to set')
+  .action(async (key, value) => {
+    const result = await setConfigCommand(key, value);
+    if (!result.success) {
+      console.error(`❌ ${result.message}`);
+      if (result.error) console.error(`   ${result.error}`);
+      process.exit(1);
+    }
+  });
+
+configCommand
+  .command('reset')
+  .description('Reset configuration to defaults')
+  .action(async () => {
+    const result = await resetConfigCommand();
+    if (!result.success) {
+      console.error(`❌ ${result.message}`);
+      if (result.error) console.error(`   ${result.error}`);
+      process.exit(1);
+    }
+  });
+
+configCommand
+  .command('info')
+  .description('Show configuration file info and available commands')
+  .action(async () => {
+    const result = await configInfoCommand();
+    if (!result.success) {
+      console.error(`❌ ${result.message}`);
+      if (result.error) console.error(`   ${result.error}`);
+      process.exit(1);
+    }
+  });
+
 // Error handling for unknown commands
 program.on('command:*', () => {
   console.error('Invalid command: %s\nSee --help for a list of available commands.', program.args.join(' '));
@@ -262,13 +346,14 @@ async function ensureDatabaseReady() {
 
 // Parse command line arguments and ensure database is ready
 async function main() {
-  // Only initialize database for commands that need it (not for --help or --version)
+  // Only initialize database for commands that need it (not for --help, --version, or config commands)
   const args = process.argv.slice(2);
   const needsDatabase = args.length > 0 &&
     !args.includes('--help') &&
     !args.includes('-h') &&
     !args.includes('--version') &&
-    !args.includes('-V');
+    !args.includes('-V') &&
+    !args.includes('config');
 
   if (needsDatabase) {
     await ensureDatabaseReady();

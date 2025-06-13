@@ -2,6 +2,14 @@ import OpenAI from "openai";
 import "dotenv/config";
 import type { TweetWithEmbedding, QueryOptions, CommandResult } from "../types/common.js";
 import { embeddingQueries } from "../database/queries.js";
+import { loadConfig } from "../config/manager.js";
+import { 
+  handleCommandError, 
+  AuthenticationError, 
+  DatabaseError,
+  ValidationError,
+  NetworkError 
+} from "../errors/index.js";
 
 function cosine(a: number[], b: number[]): number {
   let dot = 0;
@@ -21,22 +29,29 @@ function cosine(a: number[], b: number[]): number {
 
 export async function askCommand(options: QueryOptions): Promise<CommandResult> {
   try {
+    // Load user configuration for defaults
+    const userConfig = await loadConfig();
+
     const {
       question,
-      topK = 5,
+      topK = userConfig.query.defaultTopK,
       model = "gpt-4o-mini",
-      vectorFile = "vectors.json"
+      vectorFile = "vectors.json" // Legacy parameter, now ignored
     } = options;
 
     console.log(`🤔 Processing question: "${question}"`);
 
-    // Check for OpenAI API key
-    if (!process.env.OPENAI_KEY) {
-      return {
-        success: false,
-        message: "Missing OpenAI API key",
-        error: "Please set OPENAI_KEY environment variable"
-      };
+    // Check for OpenAI API key (from config or environment)
+    const apiKey = userConfig.api.openaiKey || process.env.OPENAI_KEY;
+    if (!apiKey) {
+      const authError = new AuthenticationError(
+        'OpenAI API key is missing or invalid',
+        { 
+          command: 'ask',
+          operation: 'api_key_check'
+        }
+      );
+      return handleCommandError(authError);
     }
 
     // Read embeddings from database
@@ -74,7 +89,7 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
 
     console.log(`📊 Found ${embeddings.length} tweet embeddings`);
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
+    const openai = new OpenAI({ apiKey: apiKey });
 
     // Generate embedding for the question
     console.log(`🧠 Generating embedding for question...`);
@@ -169,14 +184,12 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
     };
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    console.error("❌ Question answering failed:", errorMessage);
-
-    return {
-      success: false,
-      message: "Question answering failed",
-      error: errorMessage
-    };
+    // Use enhanced error handling
+    return handleCommandError(error, {
+      command: 'ask',
+      operation: 'question_answering',
+      timestamp: new Date()
+    });
   }
 }
 

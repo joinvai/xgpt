@@ -1,4 +1,4 @@
-import { input, confirm } from '@inquirer/prompts';
+import { input, confirm, select } from '@inquirer/prompts';
 import { promptContentType, getContentTypeFilters } from '../prompts/contentType.js';
 import { promptSearchScope } from '../prompts/searchScope.js';
 import { promptTimeRange } from '../prompts/timeRange.js';
@@ -7,11 +7,20 @@ import { embedCommand } from './embed.js';
 import type { SessionConfig, PromptSession } from '../types/session.js';
 import type { CommandResult } from '../types/common.js';
 import { calculateDateRange, formatDateRange, getRelativeTimeDescription } from '../utils/dateUtils.js';
+import { RATE_LIMIT_PROFILES, getAvailableProfiles } from '../rateLimit/config.js';
+import { TweetEstimator } from '../rateLimit/estimator.js';
+import { loadConfig } from '../config/manager.js';
+import { handleCommandError } from '../errors/index.js';
 
 export async function interactiveCommand(username?: string): Promise<CommandResult> {
   try {
     console.log('\n🚀 Welcome to X-GPT Interactive Mode!');
     console.log('Let\'s configure your tweet scraping session step by step.\n');
+
+    // Load user configuration for defaults
+    const userConfig = await loadConfig();
+    console.log(`📋 Using saved preferences from: ~/.xgpt/config.json`);
+    console.log(`💡 Tip: Use 'xgpt config list' to view/modify your defaults\n`);
 
     // Initialize session
     const session: PromptSession = {
@@ -44,17 +53,21 @@ export async function interactiveCommand(username?: string): Promise<CommandResu
 
     // Step 2: Content type selection
     session.step = 'content-type';
-    session.config.contentType = await promptContentType();
+    // Map config content type to session content type
+    const defaultContentType = userConfig.scraping.includeReplies
+      ? (userConfig.scraping.includeRetweets ? 'both' : 'replies')
+      : 'tweets';
+    session.config.contentType = await promptContentType(defaultContentType);
 
     // Step 3: Search scope selection
     session.step = 'search-scope';
-    const scopeResult = await promptSearchScope();
+    const scopeResult = await promptSearchScope(userConfig.scraping.defaultKeywords);
     session.config.searchScope = scopeResult.searchScope;
     session.config.keywords = scopeResult.keywords;
 
     // Step 4: Time range selection
     session.step = 'time-range';
-    const timeResult = await promptTimeRange();
+    const timeResult = await promptTimeRange(userConfig.scraping.defaultTimeRange);
     session.config.timeRange = timeResult.timeRange;
     session.config.customDateRange = timeResult.customDateRange;
 
@@ -63,7 +76,7 @@ export async function interactiveCommand(username?: string): Promise<CommandResu
 
     const maxTweets = await input({
       message: 'Maximum number of tweets to scrape:',
-      default: '10000',
+      default: userConfig.scraping.maxTweets.toString(),
       validate: (input: string) => {
         const num = parseInt(input);
         if (isNaN(num) || num <= 0) {
@@ -76,12 +89,31 @@ export async function interactiveCommand(username?: string): Promise<CommandResu
       }
     });
 
+    // Rate limiting profile selection
+    console.log('\n🛡️  Rate Limiting Profile');
+    console.log('Choose how aggressively to scrape (affects speed vs account safety):');
+
+    const rateLimitProfile = await select({
+      message: 'Select rate limiting profile:',
+      choices: getAvailableProfiles().map(profileName => {
+        const profile = RATE_LIMIT_PROFILES[profileName];
+        const estimate = TweetEstimator.estimateCollectionTime(parseInt(maxTweets), profile);
+        return {
+          name: `${profile.name} - ${profile.description} (${estimate.estimatedMinutes}min for ${maxTweets} tweets)`,
+          value: profileName,
+          description: `${profile.riskLevel.toUpperCase()} RISK - ${profile.requestsPerMinute} req/min`
+        };
+      }),
+      default: userConfig.scraping.rateLimitProfile
+    });
+
     const generateEmbeddings = await confirm({
       message: 'Generate embeddings after scraping? (Required for Q&A)',
-      default: true
+      default: userConfig.embedding.autoGenerate
     });
 
     session.config.maxTweets = parseInt(maxTweets);
+    session.config.rateLimitProfile = rateLimitProfile;
     session.config.generateEmbeddings = generateEmbeddings;
 
     // Step 6: Configuration summary and confirmation
@@ -110,14 +142,12 @@ export async function interactiveCommand(username?: string): Promise<CommandResu
     return result;
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('\n❌ Interactive session failed:', errorMessage);
-
-    return {
-      success: false,
-      message: 'Interactive session failed',
-      error: errorMessage
-    };
+    // Use enhanced error handling
+    return handleCommandError(error, {
+      command: 'interactive',
+      operation: 'interactive_session',
+      timestamp: new Date()
+    });
   }
 }
 
@@ -131,6 +161,7 @@ async function showConfigurationSummary(session: PromptSession): Promise<void> {
   console.log(`🔍 Scope: ${getScopeDescription(session.config)}`);
   console.log(`📅 Time: ${getTimeDescription(session.config)}`);
   console.log(`📊 Limit: ${session.config.maxTweets?.toLocaleString()} tweets max`);
+  console.log(`🛡️  Rate Limit: ${getRateLimitDescription(session.config.rateLimitProfile!)}`);
   console.log(`🧠 Embeddings: ${session.config.generateEmbeddings ? 'Yes' : 'No'}`);
 
   console.log('='.repeat(60));
@@ -155,7 +186,8 @@ async function executeScraping(session: PromptSession): Promise<CommandResult> {
     includeRetweets: filters.includeRetweets,
     maxTweets: config.maxTweets!,
     keywords: config.keywords,
-    dateRange
+    dateRange,
+    rateLimitProfile: config.rateLimitProfile || 'conservative'
   });
 
   if (!scrapeResult.success) {
@@ -214,4 +246,12 @@ function getTimeDescription(config: Partial<SessionConfig>): string {
     return formatDateRange(config.customDateRange.start, config.customDateRange.end);
   }
   return getRelativeTimeDescription(config.timeRange!);
+}
+
+function getRateLimitDescription(profileName: string): string {
+  const profile = RATE_LIMIT_PROFILES[profileName];
+  if (!profile) return 'Unknown';
+
+  const riskEmoji = profile.riskLevel === 'low' ? '🟢' : profile.riskLevel === 'medium' ? '🟡' : '🔴';
+  return `${profile.name} ${riskEmoji} (${profile.requestsPerMinute} req/min)`;
 }

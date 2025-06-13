@@ -3,6 +3,14 @@ import "dotenv/config";
 import type { Tweet, TweetWithEmbedding, EmbeddingOptions, CommandResult } from "../types/common.js";
 import { tweetQueries, embeddingQueries } from "../database/queries.js";
 import type { NewEmbedding } from "../database/schema.js";
+import { loadConfig } from "../config/manager.js";
+import { 
+  handleCommandError, 
+  AuthenticationError, 
+  DatabaseError,
+  NetworkError,
+  ErrorCategory 
+} from "../errors/index.js";
 
 function chunkArray<T>(arr: T[], n: number): T[][] {
   return Array.from({ length: Math.ceil(arr.length / n) }, (_v, i) =>
@@ -12,9 +20,12 @@ function chunkArray<T>(arr: T[], n: number): T[][] {
 
 export async function embedCommand(options: EmbeddingOptions = {}): Promise<CommandResult> {
   try {
+    // Load user configuration for defaults
+    const userConfig = await loadConfig();
+
     const {
-      model = "text-embedding-3-small",
-      batchSize = 1000,
+      model = userConfig.embedding.model,
+      batchSize = userConfig.embedding.batchSize,
       inputFile = "tweets.json", // Legacy parameter, now ignored
       outputFile = "vectors.json" // Legacy parameter, now ignored
     } = options;
@@ -22,13 +33,17 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
     console.log(`🧠 Starting embedding generation...`);
     console.log(`📊 Model: ${model}, Batch size: ${batchSize}`);
 
-    // Check for OpenAI API key
-    if (!process.env.OPENAI_KEY) {
-      return {
-        success: false,
-        message: "Missing OpenAI API key",
-        error: "Please set OPENAI_KEY environment variable"
-      };
+    // Check for OpenAI API key (from config or environment)
+    const apiKey = userConfig.api.openaiKey || process.env.OPENAI_KEY;
+    if (!apiKey) {
+      const authError = new AuthenticationError(
+        'OpenAI API key is missing or invalid',
+        { 
+          command: 'embed',
+          operation: 'api_key_check'
+        }
+      );
+      return handleCommandError(authError);
     }
 
     // Read tweets from database
@@ -65,7 +80,7 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
 
     console.log(`📊 Found ${tweets.length} tweets to embed`);
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
+    const openai = new OpenAI({ apiKey: apiKey });
     const embeddings: TweetWithEmbedding[] = [];
     const embeddingBatch: NewEmbedding[] = [];
 
@@ -113,11 +128,11 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
 
       } catch (error) {
         console.error(`❌ Failed to process chunk ${i + 1}:`, error);
-        return {
-          success: false,
-          message: `Failed to generate embeddings for chunk ${i + 1}`,
-          error: error instanceof Error ? error.message : "Embedding generation failed"
-        };
+        return handleCommandError(error, {
+          command: 'embed',
+          operation: 'embedding_generation',
+          metadata: { chunkNumber: i + 1, totalChunks: chunks.length }
+        });
       }
     }
 
@@ -129,11 +144,16 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
         console.log(`✅ Successfully saved ${embeddingBatch.length} embeddings to database`);
       } catch (error) {
         console.error(`❌ Failed to save embeddings to database:`, error);
-        return {
-          success: false,
-          message: "Failed to save embeddings to database",
-          error: error instanceof Error ? error.message : "Database insertion failed"
-        };
+        const dbError = new DatabaseError(
+          'Failed to save embeddings to database',
+          { 
+            command: 'embed',
+            operation: 'database_save',
+            metadata: { embeddingCount: embeddingBatch.length }
+          },
+          error instanceof Error ? error : undefined
+        );
+        return handleCommandError(dbError);
       }
     }
 
@@ -153,14 +173,10 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
     };
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    console.error("❌ Embedding generation failed:", errorMessage);
-
-    return {
-      success: false,
-      message: "Embedding generation failed",
-      error: errorMessage
-    };
+    return handleCommandError(error, {
+      command: 'embed',
+      operation: 'embedding_workflow'
+    });
   }
 }
 
