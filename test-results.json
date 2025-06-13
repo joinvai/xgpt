@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-06-13T14:49:31.681Z",
+  "summary": {
+    "totalTests": 0,
+    "totalPassed": 0,
+    "totalFailed": 0,
+    "totalDuration": 9178,
+    "successRate": 0
+  },
+  "suites": [
+    {
+      "name": "Unit Tests",
+      "passed": 0,
+      "failed": 0,
+      "duration": 17,
+      "success": false
+    },
+    {
+      "name": "Integration Tests",
+      "passed": 0,
+      "failed": 0,
+      "duration": 5923,
+      "success": false
+    },
+    {
+      "name": "End-to-End Tests",
+      "passed": 0,
+      "failed": 0,
+      "duration": 3019,
+      "success": false
+    }
+  ],
+  "environment": {
+    "nodeVersion": "v22.6.0",
+    "platform": "darwin",
+    "hasAuthTokens": true,
+    "hasOpenAI": false,
+    "isCI": false
+  }
+}

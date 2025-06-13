@@ -1,3 +1,4 @@
+
 # dependencies (bun install)
 node_modules
 
@@ -32,3 +33,17 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Data files with potentially sensitive content
+tweets.json
+vectors.json
+test-results.json
+
+# Backup directories
+data/backups/
