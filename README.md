@@ -23,16 +23,23 @@ A powerful, production-ready CLI tool for AI-powered Twitter/X scraping and ques
 - **Duplicate Detection**: Intelligent duplicate prevention and graceful handling
 
 ### ⚡ **Performance & Reliability**
-- **Optimized Queries**: 99.8/100 performance score with sub-millisecond query times
-- **Batch Processing**: Efficient chunked processing for large datasets
-- **Progress Indicators**: Real-time progress tracking with ETA calculations
-- **Error Recovery**: Comprehensive error handling with detailed logging
+- **Rate Limiting Protection**: Smart rate limiting with multiple profiles to protect your account
+- **Visual Progress Indicators**: Real-time progress bars, spinners, and status updates
+- **Optimized Database**: 99.8/100 performance score with 13 indexes and WAL mode
+- **Comprehensive Error Handling**: User-friendly error messages with recovery suggestions
+- **Configuration System**: Persistent user preferences and settings management
+
+### 🎨 **User Experience**
+- **Interactive Mode**: Guided setup wizard for beginners
+- **Progress Visualization**: See exactly what's happening with progress bars and ETAs
+- **Smart Error Messages**: Get helpful suggestions when things go wrong
+- **Flexible Configuration**: Save your preferences for future sessions
 
 ## 📦 **Installation**
 
 ```bash
 # Clone the repository
-git clone https://github.com/Vibe-with-AI/xgpt.git
+git clone https://github.com/joinvai/xgpt.git
 cd xgpt
 
 # Install dependencies
@@ -210,6 +217,25 @@ The system will:
 - Show similarity scores, usernames, dates, and source tweets
 - Provide citations for transparency and verification
 
+### 🎯 Visual Progress Indicators
+
+Experience real-time feedback during operations:
+
+```
+🐦 Scraping |████████████████████░░░░░░░░░░| 67% | 335/500 tweets | Processed: 380 | Delays: 8 | ETA: 125s
+
+🧠 Embedding |████████████████████████████████| 100% | 335/335 | Batch: 7/7 | ETA: 0s
+
+⠸ Loading embeddings from database...
+✅ Found 1,523 tweet embeddings
+
+🔍 Finding 5 most relevant tweets...
+✅ Found relevant tweets
+
+🤖 Generating answer using gpt-4o-mini...
+✅ Answer generated
+```
+
 ## 🗄️ **Database Features**
 
 X-GPT uses a high-performance SQLite database with advanced optimization:
@@ -235,6 +261,16 @@ xgpt optimize --metrics
 # Run performance benchmarks
 xgpt benchmark --report
 # Output: Generates detailed performance report with recommendations
+
+# Configuration management
+xgpt config list
+# Output: Shows all configuration settings
+
+xgpt config set scraping.rateLimitProfile moderate
+# Output: Updates rate limit profile
+
+xgpt config get api.openaiKey
+# Output: Shows specific configuration value
 ```
 
 ### **Migration System**
@@ -295,7 +331,7 @@ xgpt/
 
 X-GPT has been successfully transformed into a powerful, production-ready CLI tool! Here's what we've built:
 
-### ✅ **Completed Features (Phase 1: Foundation)**
+### ✅ **Completed Features**
 
 #### 🚀 **Full CLI Framework**
 - ✅ Interactive prompts with validation and guided setup
@@ -329,11 +365,25 @@ X-GPT has been successfully transformed into a powerful, production-ready CLI to
 - ✅ **Health Monitoring**: Database health checks and statistics
 - ✅ **Backup System**: Automatic backups before migrations
 
-#### 🛡️ **Enhanced Error Handling** ✨ NEW
+#### 🛡️ **Enhanced Error Handling**
 - ✅ **Smart Error Detection**: Automatic categorization of errors
 - ✅ **Recovery Suggestions**: Actionable steps to resolve issues
 - ✅ **Context-Aware Messages**: Detailed error information with commands
 - ✅ **Graceful Degradation**: Non-critical errors handled as warnings
+
+#### 📊 **Visual Progress Indicators** ✨ NEW
+- ✅ **Progress Bars**: Real-time progress with ETA for scraping and embedding
+- ✅ **Spinners**: Elegant loading indicators for quick operations
+- ✅ **Status Lines**: Live updates for database operations
+- ✅ **Batch Tracking**: See current batch progress during embedding
+- ✅ **Rate Limit Awareness**: Progress bars show delays and throttling
+
+#### ⚙️ **Configuration System**
+- ✅ **Persistent Settings**: Save preferences across sessions
+- ✅ **Config Commands**: Get, set, list, and reset configuration
+- ✅ **API Key Management**: Secure storage of OpenAI and Twitter credentials
+- ✅ **Rate Limit Profiles**: Choose between conservative, moderate, and aggressive
+- ✅ **Default Values**: Smart defaults for all operations
 
 #### 🎯 **Example: Enhanced Error Messages**
 ```bash
@@ -348,27 +398,30 @@ X-GPT has been successfully transformed into a powerful, production-ready CLI to
    1. Check your API keys and tokens
       Command: xgpt config list
    2. Update your Twitter auth tokens
-      More info: https://github.com/Vibe-with-AI/xgpt#cookie-setup
+      More info: https://github.com/joinvai/xgpt#cookie-setup
 ```
 
-### 🚀 **Next Phase Options**
+### 🚀 **What's Next?**
 
-The foundation is complete! Choose your next adventure:
+The core functionality is complete and production-ready! Here are some exciting features we could add:
 
-#### **Phase 3: Enhanced Scraping** ✅ COMPLETED
-- ✅ Advanced content filtering and deduplication
-- ✅ Optimized time-based filtering with early termination
-- ✅ Multi-user batch processing capabilities
+#### **Data Export & Analytics**
+- 📊 Export to multiple formats (JSON, CSV, Markdown, XML)
+- 📈 Tweet analytics and sentiment analysis
+- 🔍 Advanced search with regex support
+- 📋 Generate insights reports
 
-#### **Phase 4: Performance & Reliability** ✅ COMPLETED
-- ✅ Rate limiting with exponential backoff and retry logic
-- ⏳ Intelligent caching system for API calls and embeddings
-- ⏳ Enhanced progress indicators and resumable operations
+#### **Performance Enhancements**
+- 💾 Intelligent caching system
+- 🔄 Resumable operations
+- ⚡ Parallel processing for multiple users
+- 🎯 Batch operations from file lists
 
-#### **Phase 5: User Experience** 🚧 IN PROGRESS
-- ✅ Configuration system for user preferences
-- ✅ Enhanced error handling with recovery suggestions
-- ⏳ Multiple export formats (JSON, CSV, Markdown, XML)
+#### **Integration Features**
+- 🔗 Webhook support for real-time updates
+- 📱 Discord/Slack notifications
+- 🗂️ Export to Notion/Obsidian
+- 🌐 API endpoint mode
 
 ## 🧪 Testing
 
