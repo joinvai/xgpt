@@ -7,7 +7,9 @@
       "Bash(bun build:*)",
       "Bash(rm:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(gh issue list:*)",
+      "Bash(ls:*)"
     ]
   },
   "enableAllProjectMcpServers": false
