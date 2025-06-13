@@ -10,6 +10,7 @@ import {
   ValidationError,
   NetworkError 
 } from "../errors/index.js";
+import { withSpinner, SpinnerPresets } from "../ui/index.js";
 
 function cosine(a: number[], b: number[]): number {
   let dot = 0;
@@ -55,11 +56,14 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
     }
 
     // Read embeddings from database
-    console.log(`📖 Loading embeddings from database...`);
     let embeddings: TweetWithEmbedding[];
 
     try {
-      const dbEmbeddings = await embeddingQueries.getEmbeddingsForSearch();
+      const dbEmbeddings = await withSpinner(
+        `📖 Loading embeddings from database...`,
+        async () => await embeddingQueries.getEmbeddingsForSearch(),
+        { preset: 'dots' }
+      );
 
       if (dbEmbeddings.length === 0) {
         return {
@@ -79,24 +83,26 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
         vec: JSON.parse(dbEmbed.vector as string)
       }));
 
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to read embeddings from database",
-        error: error instanceof Error ? error.message : "Database query failed"
-      };
-    }
+      console.log(`📊 Found ${embeddings.length} tweet embeddings`);
 
-    console.log(`📊 Found ${embeddings.length} tweet embeddings`);
+    } catch (error) {
+      return handleCommandError(error, {
+        command: 'ask',
+        operation: 'load_embeddings'
+      });
+    }
 
     const openai = new OpenAI({ apiKey: apiKey });
 
     // Generate embedding for the question
-    console.log(`🧠 Generating embedding for question...`);
-    const questionEmbedding = await openai.embeddings.create({
-      model: "text-embedding-3-small",
-      input: question
-    });
+    const questionEmbedding = await withSpinner(
+      `🧠 Generating embedding for question...`,
+      async () => await openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: question
+      }),
+      { preset: 'pulse' }
+    );
 
     const questionVector = questionEmbedding.data[0]?.embedding;
     if (!questionVector) {
@@ -108,38 +114,45 @@ export async function askCommand(options: QueryOptions): Promise<CommandResult> 
     }
 
     // Find most similar tweets using cosine similarity
-    console.log(`🔍 Finding ${topK} most relevant tweets...`);
-    const similarities = embeddings
-      .map(tweet => ({
-        ...tweet,
-        similarity: cosine(questionVector, tweet.vec)
-      }))
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, topK);
+    const similarities = await withSpinner(
+      `🔍 Finding ${topK} most relevant tweets...`,
+      async () => {
+        return embeddings
+          .map(tweet => ({
+            ...tweet,
+            similarity: cosine(questionVector, tweet.vec)
+          }))
+          .sort((a, b) => b.similarity - a.similarity)
+          .slice(0, topK);
+      },
+      { preset: 'arrow' }
+    );
 
     // Prepare context for GPT
     const context = similarities
       .map((tweet, index) => `${index + 1}. ${tweet.text} (similarity: ${tweet.similarity.toFixed(3)})`)
       .join("\n");
 
-    console.log(`🤖 Generating answer using ${model}...`);
-
     // Generate answer using GPT
-    const response = await openai.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: "system",
-          content: "You are an AI assistant that answers questions based on tweet content. Use the provided tweets as context to answer the user's question. Be concise and reference specific tweets when relevant."
-        },
-        {
-          role: "user",
-          content: `Question: ${question}\n\nRelevant tweets:\n${context}`
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 500
-    });
+    const response = await withSpinner(
+      `🤖 Generating answer using ${model}...`,
+      async () => await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: "system",
+            content: "You are an AI assistant that answers questions based on tweet content. Use the provided tweets as context to answer the user's question. Be concise and reference specific tweets when relevant."
+          },
+          {
+            role: "user",
+            content: `Question: ${question}\n\nRelevant tweets:\n${context}`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      }),
+      { preset: 'star' }
+    );
 
     const answer = response.choices[0]?.message?.content;
     if (!answer) {

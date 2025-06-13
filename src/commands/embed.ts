@@ -11,6 +11,12 @@ import {
   NetworkError,
   ErrorCategory 
 } from "../errors/index.js";
+import { 
+  createProgressBar, 
+  ProgressPresets,
+  withSpinner,
+  StatusLine
+} from "../ui/index.js";
 
 function chunkArray<T>(arr: T[], n: number): T[][] {
   return Array.from({ length: Math.ceil(arr.length / n) }, (_v, i) =>
@@ -88,9 +94,22 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
     const chunks = chunkArray(tweets, batchSize);
     let processedCount = 0;
 
+    // Create progress bar for embedding generation
+    const progressBar = createProgressBar({
+      ...ProgressPresets.embedding(model),
+      format: '🧠 Embedding |{bar}| {percentage}% | {value}/{total} | Batch: {batchNumber}/{totalBatches} | ETA: {eta}s'
+    });
+    progressBar.start(tweets.length);
+
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
-      console.log(`🔄 Processing chunk ${i + 1}/${chunks.length} (${chunk.length} tweets)...`);
+      
+      // Update progress context
+      progressBar.update(processedCount, {
+        batchNumber: i + 1,
+        totalBatches: chunks.length,
+        processed: processedCount
+      });
 
       try {
         const response = await openai.embeddings.create({
@@ -119,7 +138,11 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
         });
 
         processedCount += chunk.length;
-        console.log(`✅ Embedded ${processedCount}/${tweets.length} tweets`);
+        progressBar.update(processedCount, {
+          batchNumber: i + 1,
+          totalBatches: chunks.length,
+          processed: processedCount
+        });
 
         // Small delay to respect rate limits
         if (i < chunks.length - 1) {
@@ -127,7 +150,7 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
         }
 
       } catch (error) {
-        console.error(`❌ Failed to process chunk ${i + 1}:`, error);
+        progressBar.fail(`Failed to process chunk ${i + 1}`);
         return handleCommandError(error, {
           command: 'embed',
           operation: 'embedding_generation',
@@ -136,13 +159,21 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
       }
     }
 
+    // Stop progress bar
+    progressBar.stop();
+
     // Save embeddings to database
     if (embeddingBatch.length > 0) {
-      console.log(`💾 Saving ${embeddingBatch.length} embeddings to database...`);
-      try {
-        await embeddingQueries.insertEmbeddings(embeddingBatch);
-        console.log(`✅ Successfully saved ${embeddingBatch.length} embeddings to database`);
-      } catch (error) {
+      await withSpinner(
+        `💾 Saving ${embeddingBatch.length} embeddings to database...`,
+        async () => {
+          await embeddingQueries.insertEmbeddings(embeddingBatch);
+        },
+        {
+          successText: `✅ Successfully saved ${embeddingBatch.length} embeddings to database`,
+          failText: `❌ Failed to save embeddings to database`
+        }
+      ).catch(error => {
         console.error(`❌ Failed to save embeddings to database:`, error);
         const dbError = new DatabaseError(
           'Failed to save embeddings to database',
@@ -154,7 +185,7 @@ export async function embedCommand(options: EmbeddingOptions = {}): Promise<Comm
           error instanceof Error ? error : undefined
         );
         return handleCommandError(dbError);
-      }
+      });
     }
 
     const message = `✅ Successfully generated embeddings for ${embeddings.length} tweets`;

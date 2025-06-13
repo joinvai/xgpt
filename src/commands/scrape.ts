@@ -1,6 +1,5 @@
 import { Scraper } from "@the-convocation/twitter-scraper";
 import "dotenv/config";
-import * as cliProgress from 'cli-progress';
 import type { ScrapingOptions, Tweet, CommandResult } from "../types/common.js";
 import { matchesKeywords } from "../prompts/searchScope.js";
 import { isWithinDateRange } from "../utils/dateUtils.js";
@@ -18,6 +17,12 @@ import {
   NetworkError,
   ErrorCategory 
 } from "../errors/index.js";
+import { 
+  createProgressBar, 
+  ProgressPresets,
+  withSpinner,
+  StatusLine
+} from "../ui/index.js";
 
 export async function scrapeCommand(options: ScrapingOptions): Promise<CommandResult> {
   const {
@@ -119,18 +124,8 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
     const startTime = Date.now();
 
     // Create progress bar with rate limit awareness
-    const progressBar = new cliProgress.SingleBar({
-      format: '🐦 Scraping |{bar}| {percentage}% | {value}/{total} tweets | Processed: {processed} | Delays: {delays} | ETA: {eta}s',
-      barCompleteChar: '\u2588',
-      barIncompleteChar: '\u2591',
-      hideCursor: true
-    });
-
-    // Start progress bar
-    progressBar.start(maxTweets, 0, {
-      processed: 0,
-      delays: 0
-    });
+    const progressBar = createProgressBar(ProgressPresets.scraping(username));
+    progressBar.start(maxTweets);
 
     try {
       for await (const tweet of scraper.getTweets(username)) {
@@ -229,12 +224,17 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
         // Update progress bar
         progressBar.update(tweets.length, {
           processed: scrapedCount,
-          delays: rateLimitDelays
+          delays: rateLimitDelays,
+          errors: 0,
+          skipped: filteredCount + keywordFilteredCount + dateFilteredCount
         });
 
         if (tweets.length >= maxTweets) {
           progressBar.update(maxTweets, {
-            processed: scrapedCount
+            processed: scrapedCount,
+            delays: rateLimitDelays,
+            errors: 0,
+            skipped: filteredCount + keywordFilteredCount + dateFilteredCount
           });
           break;
         }
@@ -246,12 +246,20 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
 
       // Save tweets to database (handle duplicates)
       if (tweetBatch.length > 0) {
-        console.log(`💾 Saving ${tweetBatch.length} tweets to database...`);
+        const saveStatus = new StatusLine();
         let savedCount = 0;
         let duplicateCount = 0;
 
-        // Insert tweets one by one to handle duplicates gracefully
-        for (const tweet of tweetBatch) {
+        // Insert tweets with progress tracking
+        for (let i = 0; i < tweetBatch.length; i++) {
+          const tweet = tweetBatch[i];
+          
+          saveStatus.update(`💾 Saving tweets to database`, {
+            total: tweetBatch.length,
+            completed: i,
+            skipped: duplicateCount
+          });
+          
           try {
             // Check if tweet already exists
             const existingTweet = await tweetQueries.tweetExists(tweet.id);
@@ -273,6 +281,7 @@ export async function scrapeCommand(options: ScrapingOptions): Promise<CommandRe
           }
         }
 
+        saveStatus.done();
         console.log(`✅ Successfully saved ${savedCount} new tweets to database`);
         if (duplicateCount > 0) {
           console.log(`ℹ️  Skipped ${duplicateCount} duplicate tweets`);
